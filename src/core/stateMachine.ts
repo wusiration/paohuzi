@@ -569,14 +569,15 @@ function executeChi(state: GameState, playerId: string, card: Card, action?: Pen
   const usedIds = option.mainCards.filter((c) => c.id !== card.id).map((c) => c.id);
   let newState = removeCardsFromHand(state, playerId, usedIds);
 
-  // 处理比牌
+  // 处理比牌：手中仍有与 target 相同的牌时，必须同时组成合法组合
   const sameCards = player.hand.filter((c) => isSameCardForAction(c, card) && !usedIds.includes(c.id));
   for (const sameCard of sameCards) {
     const rest = player.hand.filter((c) => c.id !== sameCard.id && !usedIds.includes(c.id));
     const biOptions = findAllChiOptions(rest, sameCard);
     if (biOptions.length > 0) {
       const biOption = biOptions[0];
-      const biUsedIds = biOption.mainCards.filter((c) => c.id !== sameCard.id).map((c) => c.id);
+      // 比牌组合中的全部牌（含 sameCard）都要从手牌移除
+      const biUsedIds = biOption.mainCards.map((c) => c.id);
       newState = removeCardsFromHand(newState, playerId, biUsedIds);
       const biMeld = buildChiMeld(player, biOption, action.sourcePlayerId);
       newState = applyMeld(newState, playerId, biMeld);
