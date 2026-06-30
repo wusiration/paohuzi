@@ -32,7 +32,7 @@ function makeMeld(type: MeldType, cards: Card[], ownerId: string): Meld {
 }
 
 // 查找所有包含第一张牌的合法组合
-function findGroupsWithFirst(hand: Card[]): { type: MeldType; cards: Card[] }[] {
+function findGroupsWithFirst(hand: Card[], isZiMo: boolean): { type: MeldType; cards: Card[] }[] {
   if (hand.length === 0) return [];
   const first = hand[0];
   const results: { type: MeldType; cards: Card[] }[] = [];
@@ -45,6 +45,14 @@ function findGroupsWithFirst(hand: Card[]): { type: MeldType; cards: Card[] }[] 
       results.push({ type: 'pair', cards: [first, hand[i]] });
       break; // 每种对子只取一次
     }
+  }
+
+  // 三张相同（碰/偎）
+  const sameCards = hand.filter((c) => isSameCard(c, first));
+  if (sameCards.length >= 3) {
+    // 自己摸到第三张算偎，否则算碰
+    const type: MeldType = isZiMo ? 'wei' : 'peng';
+    results.push({ type, cards: sameCards.slice(0, 3) });
   }
 
   // 同花色顺子
@@ -72,11 +80,12 @@ function findGroupsWithFirst(hand: Card[]): { type: MeldType; cards: Card[] }[] 
 function searchSplit(
   hand: Card[],
   ownerId: string,
+  isZiMo: boolean,
   hasPair: boolean,
   usedPair: boolean,
   cache: Map<string, SplitResult>
 ): SplitResult {
-  const key = hand.map((c) => c.id).join(',') + `|${usedPair}`;
+  const key = hand.map((c) => c.id).join(',') + `|${usedPair}|${isZiMo}`;
   if (cache.has(key)) return cache.get(key)!;
 
   if (hand.length === 0) {
@@ -86,13 +95,13 @@ function searchSplit(
   }
 
   let best: SplitResult | null = null;
-  const groups = findGroupsWithFirst(hand);
+  const groups = findGroupsWithFirst(hand, isZiMo);
 
   for (const group of groups) {
     if (group.type === 'pair') {
       if (usedPair) continue;
       const remaining = removeCards(hand, group.cards);
-      const sub = searchSplit(remaining, ownerId, true, true, cache);
+      const sub = searchSplit(remaining, ownerId, isZiMo, true, true, cache);
       if (sub.valid) {
         const pairMeld = makeMeld('pair', group.cards, ownerId);
         const candidate: SplitResult = {
@@ -105,7 +114,7 @@ function searchSplit(
       }
     } else {
       const remaining = removeCards(hand, group.cards);
-      const sub = searchSplit(remaining, ownerId, hasPair, usedPair, cache);
+      const sub = searchSplit(remaining, ownerId, isZiMo, hasPair, usedPair, cache);
       if (sub.valid) {
         const meld = makeMeld(group.type, group.cards, ownerId);
         const candidate: SplitResult = {
@@ -124,10 +133,10 @@ function searchSplit(
   return result;
 }
 
-export function splitHand(hand: Card[], ownerId: string, requirePair: boolean): SplitResult {
+export function splitHand(hand: Card[], ownerId: string, requirePair: boolean, isZiMo: boolean = false): SplitResult {
   const sorted = hand.slice().sort(cardSort);
   const cache = new Map<string, SplitResult>();
-  const result = searchSplit(sorted, ownerId, false, false, cache);
+  const result = searchSplit(sorted, ownerId, isZiMo, false, false, cache);
   if (!result.valid) return result;
   if (requirePair && !result.pair) return { valid: false, melds: [], huxi: 0 };
   return result;
@@ -146,7 +155,7 @@ export function calculateHu(
 ): HuResult {
   const fullHand = [...player.hand, extraCard];
   const requirePair = hasPaoOrTi(player.melds);
-  const split = splitHand(fullHand, player.id, requirePair);
+  const split = splitHand(fullHand, player.id, requirePair, isZiMo);
 
   if (!split.valid) {
     return {
@@ -195,6 +204,16 @@ export function calculateHu(
   };
 }
 
+function hasEffectiveMingtang(huResult: HuResult): boolean {
+  // 排除仅命中“普通牌型（2-9 红，1 番）”的情况
+  const hasNormalOnly =
+    huResult.redCount >= 2 && huResult.redCount <= 9 &&
+    huResult.bigCount < 18 &&
+    huResult.smallCount < 16 &&
+    huResult.melds.some((m) => ['sequence', 'specialSequence', 'mixedTriplet'].includes(m.type));
+  return !hasNormalOnly;
+}
+
 export function canHu(
   player: PlayerState,
   extraCard: Card,
@@ -205,8 +224,10 @@ export function canHu(
   const result = calculateHu(player, extraCard, sourcePlayerId, sourceType, isZiMo);
   if (!result.canHu) return false;
 
-  // 起胡门槛：自摸>=15，非自摸>=18（15-17需调用方检查名堂）
+  // 起胡门槛
   if (result.huxi < 15) return false;
   if (isZiMo) return true;
-  return result.huxi >= 18;
+  if (result.huxi >= 18) return true;
+  // 15-17 胡息胡别人明牌需具备有效名堂（非普通牌型）
+  return hasEffectiveMingtang(result);
 }
