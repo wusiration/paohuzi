@@ -672,27 +672,33 @@ function updatePlayer(state: GameState, playerId: string, updater: (p: PlayerSta
   };
 }
 
+function computePlayerStats(p: PlayerState): Partial<PlayerState> {
+  const allCards = [...p.hand, ...p.melds.flatMap((m) => m.cards)];
+  const huxi = p.melds.reduce((sum, m) => sum + m.huxi, 0);
+  const redCount = allCards.filter((c) => c.isRed).length;
+  return { huxi, redCount };
+}
+
 function applyMeld(state: GameState, playerId: string, meld: Meld): GameState {
-  return updatePlayer(state, playerId, (p) => ({
-    ...p,
-    melds: [...p.melds, meld],
-    hand: sortHand(p.hand),
-  }));
+  return updatePlayer(state, playerId, (p) => {
+    const updated = { ...p, melds: [...p.melds, meld], hand: sortHand(p.hand) };
+    return { ...updated, ...computePlayerStats(updated) };
+  });
 }
 
 function removeMeld(state: GameState, playerId: string, meldId: string): GameState {
-  return updatePlayer(state, playerId, (p) => ({
-    ...p,
-    melds: p.melds.filter((m) => m.id !== meldId),
-  }));
+  return updatePlayer(state, playerId, (p) => {
+    const updated = { ...p, melds: p.melds.filter((m) => m.id !== meldId) };
+    return { ...updated, ...computePlayerStats(updated) };
+  });
 }
 
 function removeCardsFromHand(state: GameState, playerId: string, cardIds: string[]): GameState {
   const idSet = new Set(cardIds);
-  return updatePlayer(state, playerId, (p) => ({
-    ...p,
-    hand: sortHand(p.hand.filter((c) => !idSet.has(c.id))),
-  }));
+  return updatePlayer(state, playerId, (p) => {
+    const updated = { ...p, hand: sortHand(p.hand.filter((c) => !idSet.has(c.id))) };
+    return { ...updated, ...computePlayerStats(updated) };
+  });
 }
 
 function addLog(

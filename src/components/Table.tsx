@@ -7,6 +7,7 @@ import { ActionPanel } from './ActionPanel';
 import { ChiSelector } from './ChiSelector';
 import { Settlement } from './Settlement';
 import { ScorePanel } from './ScorePanel';
+import { GameLog } from './GameLog';
 import type { GameState } from '../core/types';
 
 interface TableProps {
@@ -20,6 +21,7 @@ interface TableProps {
 export function Table({ state, onDiscard, onAction, onPass, onNextRound }: TableProps) {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [chiAction, setChiAction] = useState<import('../core/types').PendingAction | null>(null);
+  const [showLog, setShowLog] = useState(false);
 
   const player = state.players.find((p) => p.id === 'player')!;
   const leftAI = state.players.find((p) => p.seat === (player.seat + 2) % 3)!;
@@ -76,6 +78,9 @@ export function Table({ state, onDiscard, onAction, onPass, onNextRound }: Table
         <div className="header-left">
           <span>局数：{state.roundIndex}</span>
           <span>牌墩：{state.deck.length}</span>
+          <button className="log-btn" onClick={() => setShowLog(true)}>
+            日志
+          </button>
         </div>
         <div className="header-center">
           {state.revealedCard && (
@@ -158,6 +163,7 @@ export function Table({ state, onDiscard, onAction, onPass, onNextRound }: Table
           onCancel={() => setChiAction(null)}
         />
       )}
+      {showLog && <GameLog state={state} onClose={() => setShowLog(false)} />}
     </div>
   );
 }

@@ -122,6 +122,20 @@ body {
   align-items: center;
 }
 
+.log-btn {
+  padding: 4px 12px;
+  background: rgba(240, 230, 210, 0.1);
+  color: #f0e6d2;
+  border: 1px solid rgba(240, 230, 210, 0.2);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.log-btn:hover {
+  background: rgba(240, 230, 210, 0.2);
+}
+
 .header-center {
   display: flex;
   gap: 24px;
@@ -513,6 +527,92 @@ body {
   padding: 4px;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 4px;
+}
+
+.gamelog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.gamelog-panel {
+  background: #2a3a2a;
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid rgba(240, 230, 210, 0.2);
+  width: 520px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.gamelog-panel h3 {
+  margin: 0 0 12px 0;
+  color: #f0e6d2;
+}
+
+.gamelog-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 8px;
+}
+
+.gamelog-empty {
+  color: rgba(240, 230, 210, 0.6);
+  text-align: center;
+  padding: 24px;
+}
+
+.gamelog-item {
+  display: flex;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  align-items: center;
+}
+
+.gamelog-turn {
+  color: rgba(240, 230, 210, 0.5);
+  min-width: 36px;
+}
+
+.gamelog-player {
+  font-weight: bold;
+  min-width: 56px;
+}
+
+.gamelog-action {
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(240, 230, 210, 0.1);
+  font-size: 0.8rem;
+  min-width: 40px;
+  text-align: center;
+}
+
+.gamelog-message {
+  color: rgba(240, 230, 210, 0.85);
+  flex: 1;
+}
+
+.gamelog-close {
+  margin-top: 16px;
+  padding: 10px;
+  background: #8b4513;
+  color: #f0e6d2;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
 .settlement-next,
