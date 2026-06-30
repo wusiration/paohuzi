@@ -167,6 +167,8 @@ function buildResponseActions(
 
     const isSelfDraw = false;
     const context = { player, card, sourcePlayerId, sourceType, isSelfDraw, isSourceFromDeck: false };
+    let hasAction = false;
+    let hasForced = false;
 
     // 胡：主动出牌不可胡；摸出的明牌可胡
     if (sourceType === 'drawReveal') {
@@ -181,6 +183,8 @@ function buildResponseActions(
           sourceType,
           priority: ACTION_PRIORITY.hu,
         });
+        hasAction = true;
+        hasForced = true;
       }
     }
 
@@ -195,6 +199,8 @@ function buildResponseActions(
         sourceType,
         priority: ACTION_PRIORITY.pao,
       });
+      hasAction = true;
+      hasForced = true;
       continue; // 跑优先于碰吃
     }
 
@@ -209,6 +215,7 @@ function buildResponseActions(
         sourceType,
         priority: ACTION_PRIORITY.peng,
       });
+      hasAction = true;
     }
 
     // 吃
@@ -224,17 +231,32 @@ function buildResponseActions(
         options: chiResult.options,
         priority: ACTION_PRIORITY.chi,
       });
+      hasAction = true;
+    }
+
+    // 有可选择的动作时添加“过”
+    if (hasAction && !hasForced) {
+      actions.push({
+        id: createPendingActionId(),
+        playerId: player.id,
+        actionType: 'pass',
+        card,
+        sourcePlayerId,
+        sourceType,
+        priority: ACTION_PRIORITY.pass,
+      });
     }
   }
 
-  return sortActions(actions, sourcePlayer.seat, state.players.length);
+  return sortActions(actions, sourcePlayer.seat, state.players.length, state.players);
 }
 
-function sortActions(actions: PendingAction[], sourceSeat: number, playerCount: number): PendingAction[] {
+function sortActions(actions: PendingAction[], sourceSeat: number, playerCount: number, players: PlayerState[]): PendingAction[] {
+  const seatMap = new Map(players.map((p) => [p.id, p.seat]));
   return actions.sort((a, b) => {
     if (a.priority !== b.priority) return a.priority - b.priority;
-    const seatA = (playerCount + a.playerId.charCodeAt(a.playerId.length - 1) - sourceSeat) % playerCount;
-    const seatB = (playerCount + b.playerId.charCodeAt(b.playerId.length - 1) - sourceSeat) % playerCount;
+    const seatA = (playerCount + (seatMap.get(a.playerId) || 0) - sourceSeat) % playerCount;
+    const seatB = (playerCount + (seatMap.get(b.playerId) || 0) - sourceSeat) % playerCount;
     return seatA - seatB;
   });
 }
@@ -315,6 +337,8 @@ function buildDrawRevealResponseActions(state: GameState, card: Card, sourcePlay
       isSelfDraw: false,
       isSourceFromDeck: true,
     };
+    let hasAction = false;
+    let hasForced = false;
 
     // 胡别人摸出的明牌
     if (canHu(player, card, sourcePlayerId, 'drawReveal', false)) {
@@ -327,6 +351,8 @@ function buildDrawRevealResponseActions(state: GameState, card: Card, sourcePlay
         sourceType: 'drawReveal',
         priority: ACTION_PRIORITY.hu,
       });
+      hasAction = true;
+      hasForced = true;
     }
 
     // 跑：手中三张遇第四张
@@ -340,6 +366,8 @@ function buildDrawRevealResponseActions(state: GameState, card: Card, sourcePlay
         sourceType: 'drawReveal',
         priority: ACTION_PRIORITY.pao,
       });
+      hasAction = true;
+      hasForced = true;
       continue;
     }
 
@@ -354,6 +382,7 @@ function buildDrawRevealResponseActions(state: GameState, card: Card, sourcePlay
         sourceType: 'drawReveal',
         priority: ACTION_PRIORITY.peng,
       });
+      hasAction = true;
     }
 
     // 吃：下家可吃
@@ -369,10 +398,23 @@ function buildDrawRevealResponseActions(state: GameState, card: Card, sourcePlay
         options: chiResult.options,
         priority: ACTION_PRIORITY.chi,
       });
+      hasAction = true;
+    }
+
+    if (hasAction && !hasForced) {
+      actions.push({
+        id: createPendingActionId(),
+        playerId: player.id,
+        actionType: 'pass',
+        card,
+        sourcePlayerId,
+        sourceType: 'drawReveal',
+        priority: ACTION_PRIORITY.pass,
+      });
     }
   }
 
-  return sortActions(actions, sourcePlayer.seat, state.players.length);
+  return sortActions(actions, sourcePlayer.seat, state.players.length, state.players);
 }
 
 export function executeAction(state: GameState, actionId: string, optionId?: string): GameState {
@@ -563,10 +605,10 @@ function executePass(state: GameState, playerId: string, card: Card, action?: Pe
     }));
   }
 
-  // 移除该玩家的pending action
+  // 玩家选择“过”时，移除该玩家所有 pending 动作
   newState = {
     ...newState,
-    pendingActions: newState.pendingActions.filter((a) => a.id !== action?.id),
+    pendingActions: newState.pendingActions.filter((a) => a.playerId !== playerId),
   };
 
   if (newState.pendingActions.length === 0) {
