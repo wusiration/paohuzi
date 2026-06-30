@@ -8,20 +8,21 @@ import { ChiSelector } from './ChiSelector';
 import { Settlement } from './Settlement';
 import { ScorePanel } from './ScorePanel';
 import { GameLog } from './GameLog';
+import { DiscardPile } from './DiscardPile';
 import type { GameState } from '../core/types';
 
 interface TableProps {
   state: GameState;
   onDiscard: (cardId: string) => void;
   onAction: (actionId: string, optionId?: string) => void;
-  onPass: () => void;
   onNextRound: () => void;
 }
 
-export function Table({ state, onDiscard, onAction, onPass, onNextRound }: TableProps) {
+export function Table({ state, onDiscard, onAction, onNextRound }: TableProps) {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [chiAction, setChiAction] = useState<import('../core/types').PendingAction | null>(null);
   const [showLog, setShowLog] = useState(false);
+  const [showDiscard, setShowDiscard] = useState(false);
 
   const player = state.players.find((p) => p.id === 'player')!;
   const leftAI = state.players.find((p) => p.seat === (player.seat + 2) % 3)!;
@@ -80,6 +81,9 @@ export function Table({ state, onDiscard, onAction, onPass, onNextRound }: Table
           <span>牌墩：{state.deck.length}</span>
           <button className="log-btn" onClick={() => setShowLog(true)}>
             日志
+          </button>
+          <button className="log-btn" onClick={() => setShowDiscard(true)}>
+            弃牌堆
           </button>
         </div>
         <div className="header-center">
@@ -144,7 +148,6 @@ export function Table({ state, onDiscard, onAction, onPass, onNextRound }: Table
           <ActionPanel
             actions={state.pendingActions}
             onAction={handleAction}
-            onPass={onPass}
           />
         )}
         <Hand
@@ -164,6 +167,7 @@ export function Table({ state, onDiscard, onAction, onPass, onNextRound }: Table
         />
       )}
       {showLog && <GameLog state={state} onClose={() => setShowLog(false)} />}
+      {showDiscard && <DiscardPile state={state} onClose={() => setShowDiscard(false)} />}
     </div>
   );
 }

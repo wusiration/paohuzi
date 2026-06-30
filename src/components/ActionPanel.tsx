@@ -3,15 +3,11 @@ import type { PendingAction } from '../core/types';
 interface ActionPanelProps {
   actions: PendingAction[];
   onAction: (actionId: string, optionId?: string) => void;
-  onPass: () => void;
 }
 
-export function ActionPanel({ actions, onAction, onPass }: ActionPanelProps) {
+export function ActionPanel({ actions, onAction }: ActionPanelProps) {
   const playerActions = actions.filter((a) => a.playerId === 'player');
   if (playerActions.length === 0) return null;
-
-  const hasForced = playerActions.some((a) => ['hu', 'pao', 'ti', 'wei', 'chouWei'].includes(a.actionType));
-  const showPass = !hasForced;
 
   const getLabel = (action: PendingAction) => {
     switch (action.actionType) {
@@ -54,11 +50,6 @@ export function ActionPanel({ actions, onAction, onPass }: ActionPanelProps) {
           {getLabel(action)}
         </button>
       ))}
-      {showPass && (
-        <button className="action-btn action-pass" onClick={onPass}>
-          过
-        </button>
-      )}
     </div>
   );
 }

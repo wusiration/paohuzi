@@ -42,15 +42,6 @@ export function useGame() {
     });
   }, []);
 
-  const doPass = useCallback(() => {
-    setState((prev) => {
-      if (prev.phase !== 'WAIT_RESPONSE') return prev;
-      const action = prev.pendingActions.find((a) => a.playerId === 'player' && a.actionType === 'pass');
-      if (!action) return prev;
-      return executeAction(prev, action.id);
-    });
-  }, []);
-
   // AI 自动执行
   useEffect(() => {
     if (!started) return;
@@ -104,7 +95,6 @@ export function useGame() {
     reset,
     doDiscard,
     doAction,
-    doPass,
     setAiDelayEnabled,
     setFastMode,
   };
