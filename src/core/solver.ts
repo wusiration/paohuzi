@@ -1,0 +1,212 @@
+import type { Card, HuResult, Meld, MeldType, PlayerState, SourceType } from './types';
+import { isSameCard, isSequence, isSpecialSequence } from './rules';
+import { createMeldId, huxiForMeld } from '../utils/helpers';
+
+export interface SplitResult {
+  valid: boolean;
+  melds: Meld[];
+  pair?: Meld;
+  huxi: number;
+}
+
+function cardSort(a: Card, b: Card): number {
+  if (a.suit !== b.suit) return a.suit === 'big' ? 1 : -1;
+  return a.rank - b.rank;
+}
+
+function removeCards(hand: Card[], toRemove: Card[]): Card[] {
+  const removedIds = new Set(toRemove.map((c) => c.id));
+  return hand.filter((c) => !removedIds.has(c.id));
+}
+
+function makeMeld(type: MeldType, cards: Card[], ownerId: string): Meld {
+  return {
+    id: createMeldId(),
+    type,
+    cards: cards.slice().sort(cardSort),
+    ownerId,
+    sourceType: 'initial',
+    isHidden: false,
+    huxi: huxiForMeld(type, cards[0].suit === 'big'),
+  };
+}
+
+// 查找所有包含第一张牌的合法组合
+function findGroupsWithFirst(hand: Card[]): { type: MeldType; cards: Card[] }[] {
+  if (hand.length === 0) return [];
+  const first = hand[0];
+  const results: { type: MeldType; cards: Card[] }[] = [];
+  const suit = first.suit;
+  const rank = first.rank;
+
+  // 对子
+  for (let i = 1; i < hand.length; i++) {
+    if (isSameCard(first, hand[i])) {
+      results.push({ type: 'pair', cards: [first, hand[i]] });
+      break; // 每种对子只取一次
+    }
+  }
+
+  // 同花色顺子
+  const sameSuit = hand.filter((c) => c.suit === suit && c.id !== first.id);
+  for (let i = 0; i < sameSuit.length; i++) {
+    for (let j = i + 1; j < sameSuit.length; j++) {
+      const triplet = [first, sameSuit[i], sameSuit[j]];
+      if (isSequence(triplet[0], triplet[1], triplet[2]) || isSpecialSequence(triplet[0], triplet[1], triplet[2])) {
+        const type = isSpecialSequence(triplet[0], triplet[1], triplet[2]) ? 'specialSequence' : 'sequence';
+        results.push({ type, cards: triplet });
+      }
+    }
+  }
+
+  // 大小三搭
+  const crossSuit = suit === 'small' ? 'big' : 'small';
+  const crossCards = hand.filter((c) => c.rank === rank && c.suit === crossSuit);
+  if (crossCards.length >= 2) {
+    results.push({ type: 'mixedTriplet', cards: [first, crossCards[0], crossCards[1]] });
+  }
+
+  return results;
+}
+
+function searchSplit(
+  hand: Card[],
+  ownerId: string,
+  hasPair: boolean,
+  usedPair: boolean,
+  cache: Map<string, SplitResult>
+): SplitResult {
+  const key = hand.map((c) => c.id).join(',') + `|${usedPair}`;
+  if (cache.has(key)) return cache.get(key)!;
+
+  if (hand.length === 0) {
+    const result: SplitResult = { valid: true, melds: [], huxi: 0 };
+    cache.set(key, result);
+    return result;
+  }
+
+  let best: SplitResult | null = null;
+  const groups = findGroupsWithFirst(hand);
+
+  for (const group of groups) {
+    if (group.type === 'pair') {
+      if (usedPair) continue;
+      const remaining = removeCards(hand, group.cards);
+      const sub = searchSplit(remaining, ownerId, true, true, cache);
+      if (sub.valid) {
+        const pairMeld = makeMeld('pair', group.cards, ownerId);
+        const candidate: SplitResult = {
+          valid: true,
+          melds: sub.melds,
+          pair: pairMeld,
+          huxi: sub.huxi,
+        };
+        if (!best || candidate.huxi > best.huxi) best = candidate;
+      }
+    } else {
+      const remaining = removeCards(hand, group.cards);
+      const sub = searchSplit(remaining, ownerId, hasPair, usedPair, cache);
+      if (sub.valid) {
+        const meld = makeMeld(group.type, group.cards, ownerId);
+        const candidate: SplitResult = {
+          valid: true,
+          melds: [meld, ...sub.melds],
+          pair: sub.pair,
+          huxi: meld.huxi + sub.huxi,
+        };
+        if (!best || candidate.huxi > best.huxi) best = candidate;
+      }
+    }
+  }
+
+  const result: SplitResult = best || { valid: false, melds: [], huxi: 0 };
+  cache.set(key, result);
+  return result;
+}
+
+export function splitHand(hand: Card[], ownerId: string, requirePair: boolean): SplitResult {
+  const sorted = hand.slice().sort(cardSort);
+  const cache = new Map<string, SplitResult>();
+  const result = searchSplit(sorted, ownerId, false, false, cache);
+  if (!result.valid) return result;
+  if (requirePair && !result.pair) return { valid: false, melds: [], huxi: 0 };
+  return result;
+}
+
+export function hasPaoOrTi(melds: Meld[]): boolean {
+  return melds.some((m) => m.type === 'pao' || m.type === 'ti');
+}
+
+export function calculateHu(
+  player: PlayerState,
+  extraCard: Card,
+  sourcePlayerId: string,
+  sourceType: SourceType,
+  isZiMo: boolean
+): HuResult {
+  const fullHand = [...player.hand, extraCard];
+  const requirePair = hasPaoOrTi(player.melds);
+  const split = splitHand(fullHand, player.id, requirePair);
+
+  if (!split.valid) {
+    return {
+      canHu: false,
+      huxi: 0,
+      melds: [],
+      redCount: 0,
+      bigCount: 0,
+      smallCount: 0,
+      isZiMo,
+      sourceType,
+      sourcePlayerId,
+    };
+  }
+
+  const allMelds = [...player.melds, ...split.melds];
+  if (split.pair) allMelds.push(split.pair);
+
+  let huxi = 0;
+  for (const meld of allMelds) {
+    huxi += meld.huxi;
+  }
+
+  let redCount = 0;
+  let bigCount = 0;
+  let smallCount = 0;
+  for (const meld of allMelds) {
+    for (const card of meld.cards) {
+      if (card.isRed) redCount++;
+      if (card.suit === 'big') bigCount++;
+      else smallCount++;
+    }
+  }
+
+  return {
+    canHu: true,
+    huxi,
+    melds: allMelds,
+    pair: split.pair,
+    redCount,
+    bigCount,
+    smallCount,
+    isZiMo,
+    sourceType,
+    sourcePlayerId,
+  };
+}
+
+export function canHu(
+  player: PlayerState,
+  extraCard: Card,
+  sourcePlayerId: string,
+  sourceType: SourceType,
+  isZiMo: boolean
+): boolean {
+  const result = calculateHu(player, extraCard, sourcePlayerId, sourceType, isZiMo);
+  if (!result.canHu) return false;
+
+  // 起胡门槛：自摸>=15，非自摸>=18（15-17需调用方检查名堂）
+  if (result.huxi < 15) return false;
+  if (isZiMo) return true;
+  return result.huxi >= 18;
+}

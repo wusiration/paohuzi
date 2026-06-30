@@ -1,0 +1,597 @@
+/* 全局重置与牌桌背景 */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  background: #1a2f1a;
+  color: #f0e6d2;
+  overflow: hidden;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(circle at center, #2a4a2a 0%, #142414 100%);
+}
+
+.app-start {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, #2a4a2a 0%, #142414 100%);
+}
+
+.start-panel {
+  text-align: center;
+  padding: 48px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 16px;
+  border: 1px solid rgba(240, 230, 210, 0.2);
+}
+
+.start-panel h1 {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+  color: #f0e6d2;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.start-btn {
+  margin-top: 24px;
+  padding: 14px 48px;
+  font-size: 1.2rem;
+  background: #8b4513;
+  color: #f0e6d2;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s;
+}
+
+.start-btn:hover {
+  transform: translateY(-2px);
+  background: #a0522d;
+}
+
+.app-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(240, 230, 210, 0.1);
+}
+
+.app-toolbar button {
+  padding: 6px 14px;
+  background: rgba(240, 230, 210, 0.1);
+  color: #f0e6d2;
+  border: 1px solid rgba(240, 230, 210, 0.2);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.app-toolbar button:hover {
+  background: rgba(240, 230, 210, 0.2);
+}
+
+.app-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+/* 牌桌 */
+.table {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  position: relative;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.header-left,
+.header-right {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.header-center {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.revealed-card-area,
+.last-discard-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: rgba(240, 230, 210, 0.8);
+}
+
+.table-body {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+}
+
+.ai-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 140px;
+}
+
+.ai-info {
+  text-align: center;
+}
+
+.ai-name {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.ai-status {
+  font-size: 0.85rem;
+  color: #ffd700;
+  min-height: 20px;
+}
+
+.ai-melds {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.player-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+}
+
+.player-info {
+  display: flex;
+  gap: 24px;
+  font-size: 0.95rem;
+}
+
+.player-name {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.player-melds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.turn-tip {
+  color: #ffd700;
+  font-size: 0.9rem;
+}
+
+/* 手牌 */
+.hand {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  padding: 8px;
+}
+
+/* 牌张 */
+.card {
+  width: 44px;
+  height: 92px;
+  border-radius: 6px;
+  background: #f5f0e6;
+  border: 1px solid #d4c4a8;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: default;
+  user-select: none;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.card-small {
+  width: 32px;
+  height: 68px;
+}
+
+.card-front {
+  flex-direction: column;
+}
+
+.card-rank {
+  font-size: 1.8rem;
+  font-weight: bold;
+  font-family: "STKaiti", "KaiTi", serif;
+}
+
+.card-small .card-rank {
+  font-size: 1.3rem;
+}
+
+.card-red {
+  color: #b22222;
+}
+
+.card-black {
+  color: #1a1a1a;
+}
+
+.card-suit-mark {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  font-size: 0.7rem;
+  color: #666;
+}
+
+.card-back {
+  background: linear-gradient(135deg, #2a3a4a 0%, #1a2a3a 100%);
+  border: 1px solid rgba(240, 230, 210, 0.2);
+}
+
+.card-back-pattern {
+  width: 70%;
+  height: 70%;
+  border: 1px solid rgba(240, 230, 210, 0.15);
+  border-radius: 4px;
+}
+
+.card-empty {
+  background: transparent;
+  border: 1px dashed rgba(240, 230, 210, 0.2);
+  box-shadow: none;
+}
+
+.hand .card {
+  cursor: pointer;
+}
+
+.hand .card:hover {
+  transform: translateY(-6px);
+}
+
+.card-selected {
+  transform: translateY(-12px);
+  box-shadow: 0 0 0 2px #ffd700, 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.card-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.card-highlight {
+  box-shadow: 0 0 0 2px #ffd700;
+}
+
+/* 落地牌组 */
+.meld {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+}
+
+.meld-cards {
+  display: flex;
+  gap: 2px;
+}
+
+.meld-info {
+  display: flex;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: rgba(240, 230, 230, 0.8);
+}
+
+.meld-hidden .meld-cards .card-back {
+  background: linear-gradient(135deg, #3a2a2a 0%, #2a1a1a 100%);
+}
+
+.meld.type-chouWei .meld-type::after {
+  content: '臭';
+  margin-left: 2px;
+  color: #ff6b6b;
+}
+
+/* 操作面板 */
+.action-panel {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.action-btn {
+  min-width: 56px;
+  padding: 8px 16px;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+}
+
+.action-hu {
+  background: #d32f2f;
+  color: #fff;
+}
+
+.action-pao,
+.action-ti,
+.action-wei,
+.action-chouWei {
+  background: #ff9800;
+  color: #fff;
+}
+
+.action-peng,
+.action-chi {
+  background: #4caf50;
+  color: #fff;
+}
+
+.action-pass {
+  background: #757575;
+  color: #fff;
+}
+
+/* 吃牌选择器 */
+.chi-selector-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.chi-selector {
+  background: #2a3a2a;
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid rgba(240, 230, 210, 0.2);
+  text-align: center;
+}
+
+.chi-options {
+  display: flex;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.chi-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(240, 230, 210, 0.15);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.chi-option:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.chi-option-cards {
+  display: flex;
+  gap: 4px;
+}
+
+.chi-cancel {
+  padding: 8px 24px;
+  background: #757575;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* 结算面板 */
+.settlement-overlay,
+.draw-game-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.settlement-panel,
+.draw-game-panel {
+  background: #2a3a2a;
+  padding: 32px;
+  border-radius: 16px;
+  border: 1px solid rgba(240, 230, 210, 0.2);
+  max-width: 560px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.settlement-panel h2 {
+  margin-top: 0;
+  color: #ffd700;
+}
+
+.settlement-source {
+  font-size: 1.1rem;
+  color: rgba(240, 230, 210, 0.8);
+  margin-bottom: 16px;
+}
+
+.settlement-section {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(240, 230, 210, 0.1);
+}
+
+.settlement-section h3 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  color: #f0e6d2;
+}
+
+.settlement-section ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.settlement-total {
+  font-weight: bold;
+  color: #ffd700;
+  margin-top: 6px;
+}
+
+.hu-melds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.hu-meld {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.settlement-next,
+.draw-game-panel button {
+  width: 100%;
+  padding: 12px;
+  background: #8b4513;
+  color: #f0e6d2;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+/* 分数面板 */
+.score-panel {
+  display: flex;
+  gap: 12px;
+}
+
+.player-score {
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  min-width: 90px;
+  text-align: center;
+}
+
+.player-score.current {
+  box-shadow: 0 0 0 2px #ffd700;
+}
+
+.player-score.human {
+  background: rgba(139, 69, 19, 0.3);
+}
+
+.player-name {
+  font-weight: bold;
+}
+
+.dealer-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 4px;
+  background: #ffd700;
+  color: #1a1a1a;
+  border-radius: 3px;
+  font-size: 0.7rem;
+}
+
+.player-score-value {
+  font-size: 1.3rem;
+  color: #ffd700;
+}
+
+.player-meta {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: rgba(240, 230, 210, 0.7);
+}
+
+/* 响应式 */
+@media (max-width: 900px) {
+  .card {
+    width: 36px;
+    height: 76px;
+  }
+
+  .card-rank {
+    font-size: 1.4rem;
+  }
+
+  .table-body {
+    padding: 0 8px;
+  }
+
+  .ai-area {
+    min-width: 100px;
+  }
+}
