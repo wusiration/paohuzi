@@ -115,4 +115,18 @@ describe('动作检测', () => {
     expect(options.length).toBeGreaterThan(0);
     expect(options.every((opt) => canCompleteBi(hand, makeCard('small', 2, 't'), opt))).toBe(true);
   });
+
+  it('坎不可拆开吃：手牌三张同牌不能用于吃牌', () => {
+    // 手牌 small-1, small-2×3, small-3，吃 small-1 需要 small-2 和 small-3
+    // small-2 是坎，不能拆开吃
+    const hand = [
+      makeCard('small', 1, 'a'),
+      makeCard('small', 2, 'b'),
+      makeCard('small', 2, 'c'),
+      makeCard('small', 2, 'd'),
+      makeCard('small', 3, 'e'),
+    ];
+    const options = findAllChiOptions(hand, makeCard('small', 1, 't'));
+    expect(options.length).toBe(0);
+  });
 });

@@ -11,7 +11,6 @@ interface MeldProps {
 
 export function Meld({ meld, viewerId, players, small }: MeldProps) {
   const isOwner = meld.ownerId === viewerId;
-  const showHidden = meld.isHidden && isOwner;
   const owner = players.find((p) => p.id === meld.ownerId);
 
   return (
@@ -20,8 +19,8 @@ export function Meld({ meld, viewerId, players, small }: MeldProps) {
         {meld.cards.map((card, index) => (
           <Card
             key={`${meld.id}-${card.id}-${index}`}
-            card={showHidden ? card : undefined}
-            hidden={!showHidden && meld.isHidden}
+            card={meld.isHidden && !isOwner ? undefined : card}
+            hidden={meld.isHidden && !isOwner}
             small={small}
           />
         ))}

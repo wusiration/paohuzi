@@ -130,6 +130,11 @@ export function isDownstreamPlayer(player: PlayerState, sourcePlayerId: string, 
   return player.seat === nextSeat;
 }
 
+function isKanCard(hand: Card[], card: Card): boolean {
+  // 手牌中同牌达到 3 张即为坎，坎不可拆开用于吃牌
+  return hand.filter((c) => isSameCard(c, card)).length >= 3;
+}
+
 export function findAllChiOptions(hand: Card[], target: Card): ChiOption[] {
   const options: ChiOption[] = [];
   const key = cardKey(target);
@@ -144,7 +149,7 @@ export function findAllChiOptions(hand: Card[], target: Card): ChiOption[] {
     const cards: Card[] = [];
     let ok = true;
     for (const r of needed) {
-      const found = hand.find((c) => c.suit === suit && c.rank === r && !isSameCard(c, target));
+      const found = hand.find((c) => c.suit === suit && c.rank === r && !isSameCard(c, target) && !isKanCard(hand, c));
       if (!found) {
         ok = false;
         break;
@@ -168,7 +173,7 @@ export function findAllChiOptions(hand: Card[], target: Card): ChiOption[] {
     const cards: Card[] = [];
     let ok = true;
     for (const r of neededRanks) {
-      const found = hand.find((c) => c.suit === suit && c.rank === r && !isSameCard(c, target));
+      const found = hand.find((c) => c.suit === suit && c.rank === r && !isSameCard(c, target) && !isKanCard(hand, c));
       if (!found) {
         ok = false;
         break;
@@ -185,9 +190,9 @@ export function findAllChiOptions(hand: Card[], target: Card): ChiOption[] {
     }
   }
 
-  // 大小三搭：target与手牌中两张同rank不同suit
+  // 大小三搭：target与手牌中两张同rank不同suit（且不能来自坎）
   const crossSuit = suit === 'small' ? 'big' : 'small';
-  const sameRankCards = hand.filter((c) => c.rank === rank && c.suit === crossSuit);
+  const sameRankCards = hand.filter((c) => c.rank === rank && c.suit === crossSuit && !isKanCard(hand, c));
   if (sameRankCards.length >= 2) {
     const cards = sameRankCards.slice(0, 2);
     options.push({
