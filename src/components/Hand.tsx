@@ -9,12 +9,13 @@ interface HandProps {
   disabled?: boolean;
   onSelect?: (card: CardType) => void;
   small?: boolean;
+  dealing?: boolean;
 }
 
-export function Hand({ cards, hidden, selectable, selectedId, disabled, onSelect, small }: HandProps) {
+export function Hand({ cards, hidden, selectable, selectedId, disabled, onSelect, small, dealing }: HandProps) {
   return (
-    <div className="hand">
-      {cards.map((card) => (
+    <div className={`hand ${small ? 'hand-compact' : ''}`}>
+      {cards.map((card, index) => (
         <Card
           key={card.id}
           card={card}
@@ -22,13 +23,16 @@ export function Hand({ cards, hidden, selectable, selectedId, disabled, onSelect
           small={small}
           selected={selectable && card.id === selectedId}
           disabled={disabled}
+          dealing={dealing}
           onClick={() => {
             if (selectable && onSelect && !disabled) {
               onSelect(card);
             }
           }}
+          style={{ animationDelay: dealing ? `${index * 40}ms` : undefined }}
         />
       ))}
     </div>
   );
 }
+

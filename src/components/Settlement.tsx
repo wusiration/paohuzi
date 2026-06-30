@@ -41,7 +41,9 @@ export function Settlement({ state, onNext }: SettlementProps) {
 
         <div className="settlement-section">
           <h3>名堂</h3>
-          {result.mingtang.length === 0 ? <div>无</div> : (
+          {result.mingtang.length === 0 ? (
+            <div className="settlement-empty">无名堂，按普通牌型结算</div>
+          ) : (
             <ul>
               {result.mingtang.map((mt, idx) => (
                 <li key={idx}>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameState } from '../core/types';
 import { createInitialState, discardCard, executeAction, startNewGame, startNextRound } from '../core/stateMachine';
 import { chooseDiscard, decideAction, isAIPlayer } from '../core/ai';
+import { soundManager } from '../audio/soundManager';
 
 const AI_DELAY = 800;
 
@@ -10,7 +11,10 @@ export function useGame() {
   const [started, setStarted] = useState(false);
   const [aiDelayEnabled, setAiDelayEnabled] = useState(true);
   const [fastMode, setFastMode] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevPhaseRef = useRef<string>('INIT');
+  const prevTurnRef = useRef<number>(0);
 
   const start = useCallback(() => {
     setStarted(true);
@@ -27,6 +31,7 @@ export function useGame() {
   }, []);
 
   const doDiscard = useCallback((cardId: string) => {
+    soundManager.play('discard');
     setState((prev) => {
       if (prev.phase !== 'WAIT_DISCARD' || prev.currentPlayerId !== 'player') return prev;
       return discardCard(prev, 'player', cardId);
@@ -38,6 +43,7 @@ export function useGame() {
       if (prev.phase !== 'WAIT_RESPONSE') return prev;
       const action = prev.pendingActions.find((a) => a.id === actionId);
       if (!action || action.playerId !== 'player') return prev;
+      soundManager.play(action.actionType === 'pass' ? 'pass' : action.actionType === 'chouWei' ? 'wei' : action.actionType);
       return executeAction(prev, actionId, optionId);
     });
   }, []);
@@ -54,6 +60,7 @@ export function useGame() {
         if (isAIPlayer(state, currentId)) {
           const cardId = chooseDiscard(state, currentId);
           if (cardId) {
+            soundManager.play('discard');
             setState((prev) => discardCard(prev, currentId, cardId));
           }
         }
@@ -63,6 +70,10 @@ export function useGame() {
         if (firstAction && isAIPlayer(state, firstAction.playerId)) {
           const decision = decideAction(state, firstAction.playerId);
           if (decision && decision.actionId) {
+            const action = state.pendingActions.find((a) => a.id === decision.actionId);
+            if (action) {
+              soundManager.play(action.actionType === 'pass' ? 'pass' : action.actionType === 'chouWei' ? 'wei' : action.actionType);
+            }
             setState((prev) => executeAction(prev, decision.actionId!, decision.optionId));
           }
         }
@@ -85,11 +96,35 @@ export function useGame() {
     };
   }, [state, started, aiDelayEnabled, fastMode]);
 
+  // 根据状态变化触发通用音效
+  useEffect(() => {
+    if (!started) return;
+
+    // 摸牌音效：回合数增加且不是刚开局
+    if (state.turnCount > prevTurnRef.current && state.turnCount > 0) {
+      soundManager.play('draw');
+    }
+
+    // 胡牌音效
+    if (state.phase === 'SETTLEMENT' && prevPhaseRef.current !== 'SETTLEMENT') {
+      soundManager.play('hu');
+    }
+
+    // 流局音效
+    if (state.phase === 'DRAW_GAME' && prevPhaseRef.current !== 'DRAW_GAME') {
+      soundManager.play('pass');
+    }
+
+    prevPhaseRef.current = state.phase;
+    prevTurnRef.current = state.turnCount;
+  }, [state, started]);
+
   return {
     state,
     started,
     aiDelayEnabled,
     fastMode,
+    soundEnabled,
     start,
     restart,
     reset,
@@ -97,5 +132,6 @@ export function useGame() {
     doAction,
     setAiDelayEnabled,
     setFastMode,
+    setSoundEnabled,
   };
 }

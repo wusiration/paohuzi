@@ -90,13 +90,13 @@ export function Table({ state, onDiscard, onAction, onNextRound }: TableProps) {
           {state.revealedCard && (
             <div className="revealed-card-area">
               <span>明牌</span>
-              <Card card={state.revealedCard} />
+              <Card card={state.revealedCard} dealing />
             </div>
           )}
           {state.lastDiscard && (
             <div className="last-discard-area">
               <span>弃牌</span>
-              <Card card={state.lastDiscard} />
+              <Card card={state.lastDiscard} played />
             </div>
           )}
         </div>
@@ -106,6 +106,10 @@ export function Table({ state, onDiscard, onAction, onNextRound }: TableProps) {
       </div>
 
       <div className="table-body">
+        <div className="table-center">
+          <span className="table-center-text">跑胡子</span>
+        </div>
+
         <div className="ai-area ai-left">
           <div className="ai-info">
             <div className="ai-name">{leftAI.name}</div>
