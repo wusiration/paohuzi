@@ -138,6 +138,7 @@ export function Table({ state, onDiscard, onAction, onNextRound }: TableProps) {
           <div className="player-name">{player.name}</div>
           <div className="player-huxi">胡息：{player.huxi}</div>
           <div className="player-red">红牌：{player.redCount}</div>
+          <div className="player-hand-count">手牌：{player.hand.length}</div>
         </div>
         <div className="player-melds">
           {player.melds.map((meld) => (
