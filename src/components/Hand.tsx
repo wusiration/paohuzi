@@ -194,7 +194,7 @@ export function Hand({
   let cardIndex = 0;
 
   return (
-    <div className={`hand ${onReorder && !hidden ? 'hand-draggable' : ''}`}>
+    <div className={`hand ${hidden ? '' : 'hand-draggable'}`}>
       {groups.map((group, groupIndex) => (
         <div key={`kan-${groupIndex}`} className="hand-kan">
           {group.map((card) => {
@@ -203,7 +203,7 @@ export function Hand({
               <div
                 key={card.id}
                 className="hand-card-slot"
-                draggable={!!onReorder && !hidden && !disabled}
+                draggable={!hidden && !disabled}
                 onDragStart={() => handleDragStart(card)}
                 onDragOver={(e) => handleDragOver(e, card)}
                 onDragEnd={handleDragEnd}
