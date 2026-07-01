@@ -181,6 +181,7 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
           />
         )}
         <Hand
+          key={state.roundIndex}
           cards={handOrder}
           selectable={isPlayerTurn}
           selectedId={selectedCardId || undefined}
