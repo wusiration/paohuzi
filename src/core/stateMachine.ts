@@ -21,7 +21,7 @@ import {
 } from './rules';
 import { calculateHu, canHu } from './solver';
 import { computeSettlement } from './scoring';
-import { clonePlayer, createLogId, createPendingActionId, nextPlayerId } from '../utils/helpers';
+import { clonePlayer, clonePlayers, createLogId, createPendingActionId, nextPlayerId } from '../utils/helpers';
 
 const ACTION_PRIORITY: Record<string, number> = {
   ti: 1,
@@ -694,6 +694,22 @@ function startNextTurn(state: GameState): GameState {
 
 export function startNextRound(state: GameState): GameState {
   return startNewGame({ ...state, roundIndex: state.roundIndex + 1 });
+}
+
+export function toggleOpenHand(state: GameState, playerId: string): GameState {
+  const player = state.players.find((p) => p.id === playerId);
+  if (!player) return state;
+  // 只允许在发牌后、首次摸牌前明牌
+  if (state.phase !== 'WAIT_DISCARD' || state.turnCount > 0) return state;
+  // 庄家只有在未出牌前才能明牌
+  if (state.currentPlayerId !== playerId) return state;
+
+  return {
+    ...state,
+    players: clonePlayers(state.players).map((p) =>
+      p.id === playerId ? { ...p, isOpenHand: true } : p
+    ),
+  };
 }
 
 // ==================== 状态辅助函数 ====================

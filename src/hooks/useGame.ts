@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameState } from '../core/types';
-import { createInitialState, discardCard, executeAction, startNewGame, startNextRound } from '../core/stateMachine';
-import { chooseDiscard, decideAction, isAIPlayer } from '../core/ai';
+import { createInitialState, discardCard, executeAction, startNewGame, startNextRound, toggleOpenHand } from '../core/stateMachine';
+import { chooseDiscard, decideAction, isAIPlayer, shouldOpenHand } from '../core/ai';
 import { soundManager } from '../audio/soundManager';
 
 const AI_DELAY = 800;
@@ -48,6 +48,10 @@ export function useGame() {
     });
   }, []);
 
+  const doOpenHand = useCallback(() => {
+    setState((prev) => toggleOpenHand(prev, 'player'));
+  }, []);
+
   // AI 自动执行
   useEffect(() => {
     if (!started) return;
@@ -58,6 +62,12 @@ export function useGame() {
     const runAI = () => {
       if (state.phase === 'WAIT_DISCARD') {
         if (isAIPlayer(state, currentId)) {
+          // AI 在首次出牌前可能选择明牌
+          const aiPlayer = state.players.find((p) => p.id === currentId);
+          if (aiPlayer && state.turnCount === 0 && !aiPlayer.isOpenHand && shouldOpenHand(aiPlayer)) {
+            setState((prev) => toggleOpenHand(prev, currentId));
+            return;
+          }
           const cardId = chooseDiscard(state, currentId);
           if (cardId) {
             soundManager.play('discard');
@@ -130,6 +140,7 @@ export function useGame() {
     reset,
     doDiscard,
     doAction,
+    doOpenHand,
     setAiDelayEnabled,
     setFastMode,
     setSoundEnabled,

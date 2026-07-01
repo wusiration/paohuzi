@@ -47,6 +47,7 @@ export interface PlayerState {
   passedHuRanks: string[];
   isAI: boolean;
   isDealer: boolean;
+  isOpenHand: boolean;
 }
 
 export type GamePhase =

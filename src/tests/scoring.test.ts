@@ -86,9 +86,9 @@ describe('囤数与结算', () => {
   it('15胡自摸按2囤', () => {
     const hu = makeHuResult({ huxi: 15, isZiMo: true });
     const players = [
-      { id: 'player', name: '我', seat: 0, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: false, isDealer: true },
-      { id: 'ai-1', name: 'AI左', seat: 1, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: true, isDealer: false },
-      { id: 'ai-2', name: 'AI右', seat: 2, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: true, isDealer: false },
+      { id: 'player', name: '我', seat: 0, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: false, isDealer: true, isOpenHand: false },
+      { id: 'ai-1', name: 'AI左', seat: 1, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: true, isDealer: false, isOpenHand: false },
+      { id: 'ai-2', name: 'AI右', seat: 2, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: true, isDealer: false, isOpenHand: false },
     ];
     const winner = players[0];
     const result = computeSettlement(winner, hu, players, 1, 1, 0);
@@ -98,13 +98,33 @@ describe('囤数与结算', () => {
   it('18胡胡别人明牌不加自摸囤', () => {
     const hu = makeHuResult({ huxi: 18, isZiMo: false });
     const players = [
-      { id: 'player', name: '我', seat: 0, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: false, isDealer: true },
-      { id: 'ai-1', name: 'AI左', seat: 1, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: true, isDealer: false },
-      { id: 'ai-2', name: 'AI右', seat: 2, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: true, isDealer: false },
+      { id: 'player', name: '我', seat: 0, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: false, isDealer: true, isOpenHand: false },
+      { id: 'ai-1', name: 'AI左', seat: 1, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: true, isDealer: false, isOpenHand: false },
+      { id: 'ai-2', name: 'AI右', seat: 2, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: true, isDealer: false, isOpenHand: false },
     ];
     const winner = players[0];
     const result = computeSettlement(winner, hu, players, 1, 1, 0);
     expect(result.ziMoTun).toBe(0);
     expect(result.totalTun).toBe(2);
+  });
+
+  it('明牌结算翻倍', () => {
+    const hu = makeHuResult({
+      huxi: 18,
+      isZiMo: false,
+      redCount: 3,
+      melds: [
+        { id: 'm1', type: 'sequence', cards: [], ownerId: 'p', sourceType: 'initial', isHidden: false, huxi: 0 },
+      ],
+    });
+    const players = [
+      { id: 'player', name: '我', seat: 0, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: false, isDealer: false, isOpenHand: true },
+      { id: 'ai-1', name: 'AI左', seat: 1, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: true, isDealer: false, isOpenHand: false },
+      { id: 'ai-2', name: 'AI右', seat: 2, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: true, isDealer: false, isOpenHand: false },
+    ];
+    const winner = players[0];
+    const result = computeSettlement(winner, hu, players, 1, 2, 10);
+    expect(result.scorePerLoser).toBe(4); // 2囤 * 1番 * 1底分 * 2明牌翻倍
+    expect(result.totalScore).toBe(8);
   });
 });

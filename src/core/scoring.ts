@@ -83,7 +83,12 @@ export function computeSettlement(
   const baseTun = computeBaseTun(huResult.huxi);
   const ziMoTun = huResult.isZiMo ? 1 : 0;
   const totalTun = baseTun + ziMoTun;
-  const scorePerLoser = totalTun * totalFan * baseScore;
+
+  // 明牌翻倍：胡牌者或被胡者任一方明牌，结算翻倍
+  const hasOpenHand = winner.isOpenHand || players.some((p) => p.id !== winner.id && p.isOpenHand);
+  const openHandMultiplier = hasOpenHand ? 2 : 1;
+
+  const scorePerLoser = totalTun * totalFan * baseScore * openHandMultiplier;
   const loserIds = players.filter((p) => p.id !== winner.id).map((p) => p.id);
   const totalScore = scorePerLoser * loserIds.length;
 

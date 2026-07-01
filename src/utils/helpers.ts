@@ -111,6 +111,10 @@ export function clonePlayer(player: PlayerState): PlayerState {
   };
 }
 
+export function clonePlayers(players: PlayerState[]): PlayerState[] {
+  return players.map(clonePlayer);
+}
+
 export function cloneMeld(meld: Meld): Meld {
   return {
     ...meld,

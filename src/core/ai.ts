@@ -6,6 +6,27 @@ export interface AIDecision {
   actionId?: string;
   optionId?: string;
   cardId?: string;
+  openHand?: boolean;
+}
+
+export function shouldOpenHand(player: PlayerState): boolean {
+  // AI 明牌策略：手牌较好时才明牌（听牌概率高、红牌多、大字多）
+  const split = splitHand(player.hand, player.id, false, false);
+  if (!split.valid) return false;
+
+  const handHuxi = split.melds.reduce((sum, m) => sum + m.huxi, 0);
+  const totalHuxi = player.huxi + handHuxi;
+  const tingLikelihood = Math.min(totalHuxi / 18, 1) * 0.6 + (split.pair ? 0.2 : 0);
+
+  const redCount = player.hand.filter((c) => c.isRed).length + player.melds.flatMap((m) => m.cards).filter((c) => c.isRed).length;
+  const bigCount = player.hand.filter((c) => c.suit === 'big').length + player.melds.flatMap((m) => m.cards).filter((c) => c.suit === 'big').length;
+
+  // 起手提或起手很好时考虑明牌
+  if (player.paoTiCount >= 1 && tingLikelihood >= 0.5) return true;
+  if (tingLikelihood >= 0.7 && redCount >= 3) return true;
+  if (redCount >= 5 && bigCount >= 8) return true;
+
+  return Math.random() > 0.92 && tingLikelihood >= 0.4;
 }
 
 export function decideAction(state: GameState, playerId: string): AIDecision | null {

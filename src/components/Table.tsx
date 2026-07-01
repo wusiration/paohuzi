@@ -16,9 +16,10 @@ interface TableProps {
   onDiscard: (cardId: string) => void;
   onAction: (actionId: string, optionId?: string) => void;
   onNextRound: () => void;
+  onOpenHand?: () => void;
 }
 
-export function Table({ state, onDiscard, onAction, onNextRound }: TableProps) {
+export function Table({ state, onDiscard, onAction, onNextRound, onOpenHand }: TableProps) {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [chiAction, setChiAction] = useState<import('../core/types').PendingAction | null>(null);
   const [showLog, setShowLog] = useState(false);
@@ -38,6 +39,7 @@ export function Table({ state, onDiscard, onAction, onNextRound }: TableProps) {
 
   const isPlayerTurn = state.phase === 'WAIT_DISCARD' && state.currentPlayerId === 'player';
   const isPlayerResponse = state.phase === 'WAIT_RESPONSE' && state.pendingActions.some((a) => a.playerId === 'player');
+  const canOpenHand = state.phase === 'WAIT_DISCARD' && state.turnCount === 0 && state.currentPlayerId === 'player' && !player.isOpenHand;
 
   const handleCardClick = (card: CardType) => {
     if (!isPlayerTurn) return;
@@ -120,10 +122,13 @@ export function Table({ state, onDiscard, onAction, onNextRound }: TableProps) {
 
         <div className="ai-area ai-left">
           <div className="ai-info">
-            <div className="ai-name">{leftAI.name}</div>
+            <div className="ai-name">
+              {leftAI.name}
+              {leftAI.isOpenHand && <span className="open-hand-badge">明</span>}
+            </div>
             <div className="ai-status">{getStatus(state, leftAI.id)}</div>
           </div>
-          <Hand cards={leftAI.hand} hidden small />
+          <Hand cards={leftAI.hand} hidden={!leftAI.isOpenHand} small />
           <div className="ai-melds">
             {leftAI.melds.map((meld) => (
               <Meld key={meld.id} meld={meld} viewerId="player" players={state.players} small />
@@ -133,10 +138,13 @@ export function Table({ state, onDiscard, onAction, onNextRound }: TableProps) {
 
         <div className="ai-area ai-right">
           <div className="ai-info">
-            <div className="ai-name">{rightAI.name}</div>
+            <div className="ai-name">
+              {rightAI.name}
+              {rightAI.isOpenHand && <span className="open-hand-badge">明</span>}
+            </div>
             <div className="ai-status">{getStatus(state, rightAI.id)}</div>
           </div>
-          <Hand cards={rightAI.hand} hidden small />
+          <Hand cards={rightAI.hand} hidden={!rightAI.isOpenHand} small />
           <div className="ai-melds">
             {rightAI.melds.map((meld) => (
               <Meld key={meld.id} meld={meld} viewerId="player" players={state.players} small />
@@ -147,10 +155,18 @@ export function Table({ state, onDiscard, onAction, onNextRound }: TableProps) {
 
       <div className="player-area">
         <div className="player-info">
-          <div className="player-name">{player.name}</div>
+          <div className="player-name">
+            {player.name}
+            {player.isOpenHand && <span className="open-hand-badge">明</span>}
+          </div>
           <div className="player-huxi">胡息：{player.huxi}</div>
           <div className="player-red">红牌：{player.redCount}</div>
           <div className="player-hand-count">手牌：{player.hand.length}</div>
+          {canOpenHand && onOpenHand && (
+            <button className="open-hand-btn" onClick={onOpenHand}>
+              明牌
+            </button>
+          )}
         </div>
         <div className="player-melds">
           {player.melds.map((meld) => (

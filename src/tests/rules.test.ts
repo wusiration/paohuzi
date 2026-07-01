@@ -21,6 +21,7 @@ function makePlayer(hand: Card[]): PlayerState {
     passedHuRanks: [],
     isAI: false,
     isDealer: true,
+    isOpenHand: false,
   };
 }
 
