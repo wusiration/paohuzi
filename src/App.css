@@ -294,12 +294,15 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 14px 18px 18px;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 18px 16px;
   background: rgba(0, 0, 0, 0.25);
   border-radius: 16px;
   border: 1px solid rgba(240, 230, 210, 0.1);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  flex: 1;
+  min-height: 0;
 }
 
 .player-info {
@@ -331,16 +334,44 @@ body {
 
 .player-melds {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-wrap: nowrap;
+  gap: 8px;
   justify-content: center;
+  align-items: flex-start;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(240, 230, 210, 0.3) transparent;
+}
+
+.player-melds::-webkit-scrollbar {
+  height: 6px;
+}
+
+.player-melds::-webkit-scrollbar-thumb {
+  background: rgba(240, 230, 210, 0.3);
+  border-radius: 3px;
 }
 
 .turn-tip {
   color: var(--gold);
   font-size: 0.9rem;
-  margin-top: 4px;
+  margin-top: 2px;
   animation: pulse 1.6s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.action-panel {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 4px;
+  padding: 8px 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+  border: 1px solid rgba(240, 230, 210, 0.1);
+  flex-shrink: 0;
 }
 
 @keyframes pulse {
@@ -544,22 +575,23 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
-  padding: 6px;
+  gap: 4px;
+  padding: 5px 6px;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 8px;
   border: 1px solid rgba(240, 230, 210, 0.08);
+  flex-shrink: 0;
 }
 
 .meld-cards {
   display: flex;
-  gap: 3px;
+  gap: 2px;
 }
 
 .meld-info {
   display: flex;
-  gap: 8px;
-  font-size: 0.72rem;
+  gap: 6px;
+  font-size: 0.7rem;
   color: rgba(240, 230, 230, 0.85);
 }
 
@@ -574,16 +606,6 @@ body {
 }
 
 /* 操作面板 */
-.action-panel {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 8px;
-  padding: 8px 14px;
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 10px;
-  border: 1px solid rgba(240, 230, 210, 0.1);
-}
-
 .action-btn {
   min-width: 58px;
   padding: 9px 18px;
