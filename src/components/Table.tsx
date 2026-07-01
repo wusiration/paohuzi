@@ -13,13 +13,14 @@ import type { GameState } from '../core/types';
 
 interface TableProps {
   state: GameState;
+  cheatMode?: boolean;
   onDiscard: (cardId: string) => void;
   onAction: (actionId: string, optionId?: string) => void;
   onNextRound: () => void;
   onOpenHand?: () => void;
 }
 
-export function Table({ state, onDiscard, onAction, onNextRound, onOpenHand }: TableProps) {
+export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOpenHand }: TableProps) {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [chiAction, setChiAction] = useState<import('../core/types').PendingAction | null>(null);
   const [showLog, setShowLog] = useState(false);
@@ -128,7 +129,7 @@ export function Table({ state, onDiscard, onAction, onNextRound, onOpenHand }: T
             </div>
             <div className="ai-status">{getStatus(state, leftAI.id)}</div>
           </div>
-          <Hand cards={leftAI.hand} hidden={!leftAI.isOpenHand} small />
+          <Hand cards={leftAI.hand} hidden={!cheatMode && !leftAI.isOpenHand} small />
           <div className="ai-melds">
             {leftAI.melds.map((meld) => (
               <Meld key={meld.id} meld={meld} viewerId="player" players={state.players} small />
@@ -144,7 +145,7 @@ export function Table({ state, onDiscard, onAction, onNextRound, onOpenHand }: T
             </div>
             <div className="ai-status">{getStatus(state, rightAI.id)}</div>
           </div>
-          <Hand cards={rightAI.hand} hidden={!rightAI.isOpenHand} small />
+          <Hand cards={rightAI.hand} hidden={!cheatMode && !rightAI.isOpenHand} small />
           <div className="ai-melds">
             {rightAI.melds.map((meld) => (
               <Meld key={meld.id} meld={meld} viewerId="player" players={state.players} small />

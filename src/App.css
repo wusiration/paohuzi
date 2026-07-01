@@ -1136,7 +1136,8 @@ body {
 }
 
 /* 音效控制 */
-.sound-toggle {
+.sound-toggle,
+.cheat-toggle {
   display: flex;
   align-items: center;
   gap: 6px;

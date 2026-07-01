@@ -12,6 +12,7 @@ export function useGame() {
   const [aiDelayEnabled, setAiDelayEnabled] = useState(true);
   const [fastMode, setFastMode] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [cheatMode, setCheatMode] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevPhaseRef = useRef<string>('INIT');
   const prevTurnRef = useRef<number>(0);
@@ -135,6 +136,7 @@ export function useGame() {
     aiDelayEnabled,
     fastMode,
     soundEnabled,
+    cheatMode,
     start,
     restart,
     reset,
@@ -144,5 +146,6 @@ export function useGame() {
     setAiDelayEnabled,
     setFastMode,
     setSoundEnabled,
+    setCheatMode,
   };
 }
