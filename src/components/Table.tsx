@@ -9,6 +9,7 @@ import { Settlement } from './Settlement';
 import { ScorePanel } from './ScorePanel';
 import { GameLog } from './GameLog';
 import { DiscardPile } from './DiscardPile';
+import { PlayerMeldsPanel } from './PlayerMeldsPanel';
 import type { GameState } from '../core/types';
 
 interface TableProps {
@@ -25,6 +26,7 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
   const [chiAction, setChiAction] = useState<import('../core/types').PendingAction | null>(null);
   const [showLog, setShowLog] = useState(false);
   const [showDiscard, setShowDiscard] = useState(false);
+  const [viewPlayerId, setViewPlayerId] = useState<string | null>(null);
 
   const player = state.players.find((p) => p.id === 'player')!;
   const leftAI = state.players.find((p) => p.seat === (player.seat + 2) % 3)!;
@@ -121,6 +123,9 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
               {leftAI.isOpenHand && <span className="open-hand-badge">明</span>}
             </div>
             <div className="ai-status">{getStatus(state, leftAI.id)}</div>
+            <button className="view-melds-btn" onClick={() => setViewPlayerId(leftAI.id)}>
+              牌型
+            </button>
           </div>
           <Hand cards={leftAI.hand} hidden={!cheatMode && !leftAI.isOpenHand} small />
           <div className="ai-melds">
@@ -137,6 +142,9 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
               {rightAI.isOpenHand && <span className="open-hand-badge">明</span>}
             </div>
             <div className="ai-status">{getStatus(state, rightAI.id)}</div>
+            <button className="view-melds-btn" onClick={() => setViewPlayerId(rightAI.id)}>
+              牌型
+            </button>
           </div>
           <Hand cards={rightAI.hand} hidden={!cheatMode && !rightAI.isOpenHand} small />
           <div className="ai-melds">
@@ -161,6 +169,9 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
               明牌
             </button>
           )}
+          <button className="view-melds-btn" onClick={() => setViewPlayerId(player.id)}>
+            牌型
+          </button>
         </div>
         <div className="player-melds">
           {player.melds.map((meld) => (
@@ -198,6 +209,7 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
       )}
       {showLog && <GameLog state={state} onClose={() => setShowLog(false)} />}
       {showDiscard && <DiscardPile state={state} onClose={() => setShowDiscard(false)} />}
+      {viewPlayerId && <PlayerMeldsPanel state={state} playerId={viewPlayerId} onClose={() => setViewPlayerId(null)} />}
     </div>
   );
 }
