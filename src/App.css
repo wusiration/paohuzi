@@ -142,20 +142,27 @@ body {
 /* 牌桌 */
 .table {
   flex: 1;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "header"
+    "body"
+    "player";
+  gap: 10px;
   padding: 10px 14px 14px;
   position: relative;
+  min-height: 0;
+  max-height: 100vh;
 }
 
 .table-header {
+  grid-area: header;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 8px 18px;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 10px;
-  margin-bottom: 10px;
   border: 1px solid rgba(240, 230, 210, 0.1);
 }
 
@@ -203,13 +210,14 @@ body {
 }
 
 .table-body {
-  flex: 1;
+  grid-area: body;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 12px 8px;
+  padding: 0 12px;
   position: relative;
   min-height: 0;
+  overflow: hidden;
 }
 
 .table-center {
@@ -243,7 +251,7 @@ body {
   align-items: center;
   gap: 10px;
   min-width: 150px;
-  max-height: 58vh;
+  max-height: 100%;
   padding: 12px 10px;
   background: rgba(0, 0, 0, 0.18);
   border-radius: 14px;
@@ -285,7 +293,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: calc(58vh - 120px);
+  max-height: calc(100% - 100px);
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 4px;
@@ -311,6 +319,7 @@ body {
 }
 
 .player-area {
+  grid-area: player;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -321,7 +330,6 @@ body {
   border-radius: 16px;
   border: 1px solid rgba(240, 230, 210, 0.1);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-  flex: 0 0 auto;
   max-height: 42vh;
   min-height: 0;
 }
