@@ -107,7 +107,19 @@ export interface ActionCheckContext {
 export function canChi(context: ActionCheckContext, players: PlayerState[]): { can: boolean; options: ChiOption[] } {
   const { player, card, sourcePlayerId, sourceType } = context;
   const isDownstream = isDownstreamPlayer(player, sourcePlayerId, players);
-  if (!isDownstream && sourceType !== 'drawReveal') return { can: false, options: [] };
+  const isSelfDraw = player.id === sourcePlayerId;
+
+  // 吃牌权限：
+  // - 自己摸出的明牌：自己可以吃
+  // - 别人主动打出的牌：只有出牌者的下家可以吃
+  // - 别人摸出的明牌：只有摸牌者的下家可以吃
+  if (sourceType === 'discard') {
+    if (!isDownstream) return { can: false, options: [] };
+  } else if (sourceType === 'drawReveal') {
+    if (!isSelfDraw && !isDownstream) return { can: false, options: [] };
+  } else {
+    return { can: false, options: [] };
+  }
 
   const options = findAllChiOptions(player.hand, card);
   const validOptions = options.filter((opt) => canCompleteBi(player.hand, card, opt));
