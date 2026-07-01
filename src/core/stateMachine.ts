@@ -308,11 +308,13 @@ function resolveDrawReveal(state: GameState, playerId: string, card: Card): Game
     return executeActionInternal(state, playerId, 'hu', card);
   }
 
-  // 其他玩家可以胡/跑/碰/吃这张明牌
+  // 所有玩家对这张明牌的响应：
+  // - 摸牌者自己可以吃自己摸出的明牌
+  // - 其他玩家可以胡/跑/碰/吃
   const actions = buildDrawRevealResponseActions(state, card, playerId);
   if (actions.length === 0) {
-    // 无人响应，摸牌者必须出牌
-    return transitionToDiscard(state, playerId);
+    // 无人响应，明牌直接弃入弃牌堆，由下家摸牌
+    return discardRevealedCard(state, card, playerId);
   }
 
   return {
@@ -322,83 +324,113 @@ function resolveDrawReveal(state: GameState, playerId: string, card: Card): Game
   };
 }
 
+function discardRevealedCard(state: GameState, card: Card, playerId: string): GameState {
+  const player = state.players.find((p) => p.id === playerId)!;
+  let newState: GameState = {
+    ...state,
+    revealedCard: undefined,
+    lastDiscard: card,
+    lastDiscardPlayerId: playerId,
+  };
+  newState = addLog(newState, playerId, playerId, 'discard', card, `${player.name}摸出${cardLabel(card)}无人要，弃入弃牌堆`);
+  return startNextTurn(newState);
+}
+
 function buildDrawRevealResponseActions(state: GameState, card: Card, sourcePlayerId: string): PendingAction[] {
   const actions: PendingAction[] = [];
   const sourcePlayer = state.players.find((p) => p.id === sourcePlayerId)!;
 
   for (const player of state.players) {
-    if (player.id === sourcePlayerId) continue;
+    const isSelf = player.id === sourcePlayerId;
 
     const context = {
       player,
       card,
       sourcePlayerId,
       sourceType: 'drawReveal' as SourceType,
-      isSelfDraw: false,
+      isSelfDraw: isSelf,
       isSourceFromDeck: true,
     };
     let hasAction = false;
     let hasForced = false;
 
-    // 胡别人摸出的明牌
-    if (canHu(player, card, sourcePlayerId, 'drawReveal', false)) {
-      actions.push({
-        id: createPendingActionId(),
-        playerId: player.id,
-        actionType: 'hu',
-        card,
-        sourcePlayerId,
-        sourceType: 'drawReveal',
-        priority: ACTION_PRIORITY.hu,
-      });
-      hasAction = true;
-      hasForced = true;
-    }
+    if (isSelf) {
+      // 摸牌者自己只能吃自己摸出的明牌（提/偎/胡已前置处理）
+      const chiResult = canChi(context, state.players);
+      if (chiResult.can) {
+        actions.push({
+          id: createPendingActionId(),
+          playerId: player.id,
+          actionType: 'chi',
+          card,
+          sourcePlayerId,
+          sourceType: 'drawReveal',
+          options: chiResult.options,
+          priority: ACTION_PRIORITY.chi,
+        });
+        hasAction = true;
+      }
+    } else {
+      // 胡别人摸出的明牌
+      if (canHu(player, card, sourcePlayerId, 'drawReveal', false)) {
+        actions.push({
+          id: createPendingActionId(),
+          playerId: player.id,
+          actionType: 'hu',
+          card,
+          sourcePlayerId,
+          sourceType: 'drawReveal',
+          priority: ACTION_PRIORITY.hu,
+        });
+        hasAction = true;
+        hasForced = true;
+      }
 
-    // 跑：手中三张遇第四张
-    if (canPaoFromHand(player.hand, card)) {
-      actions.push({
-        id: createPendingActionId(),
-        playerId: player.id,
-        actionType: 'pao',
-        card,
-        sourcePlayerId,
-        sourceType: 'drawReveal',
-        priority: ACTION_PRIORITY.pao,
-      });
-      hasAction = true;
-      hasForced = true;
-      continue;
-    }
+      // 跑：手中三张遇第四张
+      if (canPaoFromHand(player.hand, card)) {
+        actions.push({
+          id: createPendingActionId(),
+          playerId: player.id,
+          actionType: 'pao',
+          card,
+          sourcePlayerId,
+          sourceType: 'drawReveal',
+          priority: ACTION_PRIORITY.pao,
+        });
+        hasAction = true;
+        hasForced = true;
+        continue;
+      }
 
-    // 碰
-    if (canPeng(player.hand, card) && !player.passedPengRanks.includes(`${card.suit}-${card.rank}`)) {
-      actions.push({
-        id: createPendingActionId(),
-        playerId: player.id,
-        actionType: 'peng',
-        card,
-        sourcePlayerId,
-        sourceType: 'drawReveal',
-        priority: ACTION_PRIORITY.peng,
-      });
-      hasAction = true;
-    }
+      // 碰
+      if (canPeng(player.hand, card) && !player.passedPengRanks.includes(`${card.suit}-${card.rank}`)) {
+        actions.push({
+          id: createPendingActionId(),
+          playerId: player.id,
+          actionType: 'peng',
+          card,
+          sourcePlayerId,
+          sourceType: 'drawReveal',
+          priority: ACTION_PRIORITY.peng,
+        });
+        hasAction = true;
+      }
 
-    // 吃：下家可吃
-    const chiResult = canChi(context, state.players);
-    if (chiResult.can) {
-      actions.push({
-        id: createPendingActionId(),
-        playerId: player.id,
-        actionType: 'chi',
-        card,
-        sourcePlayerId,
-        sourceType: 'drawReveal',
-        options: chiResult.options,
-        priority: ACTION_PRIORITY.chi,
-      });
-      hasAction = true;
+      // 吃：下家可吃
+      const chiResult = canChi(context, state.players);
+      if (chiResult.can) {
+        actions.push({
+          id: createPendingActionId(),
+          playerId: player.id,
+          actionType: 'chi',
+          card,
+          sourcePlayerId,
+          sourceType: 'drawReveal',
+          options: chiResult.options,
+          priority: ACTION_PRIORITY.chi,
+        });
+        hasAction = true;
+      }
     }
 
     if (hasAction && !hasForced) {
