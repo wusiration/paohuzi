@@ -27,6 +27,7 @@ export function Table({ state, onDiscard, onAction, onNextRound }: TableProps) {
   const player = state.players.find((p) => p.id === 'player')!;
   const leftAI = state.players.find((p) => p.seat === (player.seat + 2) % 3)!;
   const rightAI = state.players.find((p) => p.seat === (player.seat + 1) % 3)!;
+  const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
 
   const isPlayerTurn = state.phase === 'WAIT_DISCARD' && state.currentPlayerId === 'player';
   const isPlayerResponse = state.phase === 'WAIT_RESPONSE' && state.pendingActions.some((a) => a.playerId === 'player');
@@ -161,7 +162,13 @@ export function Table({ state, onDiscard, onAction, onNextRound }: TableProps) {
           selectedId={selectedCardId || undefined}
           onSelect={handleCardClick}
         />
-        {isPlayerTurn && <div className="turn-tip">请选择一张牌打出</div>}
+        {isPlayerTurn ? (
+          <div className="turn-tip">你的回合，请选择一张牌打出</div>
+        ) : isPlayerResponse ? (
+          <div className="turn-tip">响应阶段：请选择是否吃/碰/胡/过</div>
+        ) : (
+          <div className="turn-tip">{currentPlayer?.name} 的回合</div>
+        )}
       </div>
 
       {chiAction && (
