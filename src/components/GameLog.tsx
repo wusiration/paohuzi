@@ -1,4 +1,19 @@
-import type { GameState } from '../core/types';
+import type { GameState, ActionType } from '../core/types';
+
+function actionLabel(action: ActionType): string {
+  switch (action) {
+    case 'hu': return '胡';
+    case 'pao': return '跑';
+    case 'ti': return '提';
+    case 'wei': return '偎';
+    case 'chouWei': return '臭偎';
+    case 'peng': return '碰';
+    case 'chi': return '吃';
+    case 'discard': return '弃';
+    case 'pass': return '过';
+    default: return action;
+  }
+}
 
 interface GameLogProps {
   state: GameState;
@@ -20,7 +35,7 @@ export function GameLog({ state, onClose }: GameLogProps) {
                 <span className="gamelog-player">
                   {state.players.find((p) => p.id === log.playerId)?.name || log.playerId}
                 </span>
-                <span className="gamelog-action">{log.action}</span>
+                <span className="gamelog-action">{actionLabel(log.action)}</span>
                 <span className="gamelog-message">{log.message}</span>
               </div>
             ))

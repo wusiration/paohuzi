@@ -777,8 +777,12 @@ function addLog(
 }
 
 function cardLabel(card: Card): string {
-  const suitLabel = card.suit === 'big' ? '大' : '小';
-  return `${suitLabel}${card.rank}`;
+  if (card.suit === 'big') {
+    const map = ['', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖', '拾'];
+    return map[card.rank];
+  }
+  const map = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+  return map[card.rank];
 }
 
 function isSameCardForAction(a: Card, b: Card): boolean {
