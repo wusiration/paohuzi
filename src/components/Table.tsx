@@ -1,5 +1,5 @@
 import type { Card as CardType } from '../core/types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Hand } from './Hand';
 import { Meld } from './Meld';
 import { Card } from './Card';
@@ -28,6 +28,13 @@ export function Table({ state, onDiscard, onAction, onNextRound }: TableProps) {
   const leftAI = state.players.find((p) => p.seat === (player.seat + 2) % 3)!;
   const rightAI = state.players.find((p) => p.seat === (player.seat + 1) % 3)!;
   const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
+
+  const [handOrder, setHandOrder] = useState<CardType[]>(player.hand);
+
+  // 玩家手牌变化时同步显示顺序（摸牌/吃碰后）
+  useEffect(() => {
+    setHandOrder(player.hand);
+  }, [player.hand]);
 
   const isPlayerTurn = state.phase === 'WAIT_DISCARD' && state.currentPlayerId === 'player';
   const isPlayerResponse = state.phase === 'WAIT_RESPONSE' && state.pendingActions.some((a) => a.playerId === 'player');
@@ -157,10 +164,11 @@ export function Table({ state, onDiscard, onAction, onNextRound }: TableProps) {
           />
         )}
         <Hand
-          cards={player.hand}
+          cards={handOrder}
           selectable={isPlayerTurn}
           selectedId={selectedCardId || undefined}
           onSelect={handleCardClick}
+          onReorder={setHandOrder}
         />
         {isPlayerTurn ? (
           <div className="turn-tip">你的回合，请选择一张牌打出</div>

@@ -414,10 +414,29 @@ body {
   gap: 8px;
   justify-content: center;
   padding: 10px;
+  flex-wrap: nowrap;
 }
 
 .hand-compact {
   gap: 4px;
+}
+
+.hand-draggable .hand-card-slot {
+  cursor: grab;
+}
+
+.hand-draggable .hand-card-slot:active {
+  cursor: grabbing;
+}
+
+.hand-card-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hand-group-gap {
+  margin-left: 18px;
 }
 
 /* 牌张 */
