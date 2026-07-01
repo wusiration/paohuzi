@@ -147,11 +147,13 @@ export function Hand({
 
   useEffect(() => {
     if (hasReordered) {
-      // 玩家已手动调整过：保留现有顺序，把新牌追加到末尾
-      const currentIds = new Set(orderedCards.map((c) => c.id));
-      const newCards = cards.filter((c) => !currentIds.has(c.id));
-      if (newCards.length > 0) {
-        const merged = [...orderedCards, ...newCards];
+      // 玩家已手动调整过：保留现有顺序，同步新增/移除的牌
+      const validIds = new Set(cards.map((c) => c.id));
+      const keptCards = orderedCards.filter((c) => validIds.has(c.id));
+      const keptIds = new Set(keptCards.map((c) => c.id));
+      const newCards = cards.filter((c) => !keptIds.has(c.id));
+      const merged = [...keptCards, ...newCards];
+      if (merged.length !== orderedCards.length || newCards.length > 0) {
         setOrderedCards(merged);
         onReorder?.(merged);
       }
