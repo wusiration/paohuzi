@@ -426,6 +426,16 @@ body {
   flex-direction: column;
   gap: 2px;
   align-items: center;
+  justify-content: flex-start;
+  min-height: calc(3 * 96px + 4px);
+}
+
+.hand-kan .card {
+  margin-top: -34px;
+}
+
+.hand-kan .card:first-child {
+  margin-top: 0;
 }
 
 .hand-draggable .hand-card-slot {
