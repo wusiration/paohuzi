@@ -481,18 +481,15 @@ body {
   margin-top: 0;
 }
 
-.hand-draggable .hand-card-slot {
-  cursor: grab;
-}
-
-.hand-draggable .hand-card-slot:active {
-  cursor: grabbing;
-}
-
 .hand-card-slot {
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: grab;
+}
+
+.hand-card-slot:active {
+  cursor: grabbing;
 }
 
 /* 牌张 */

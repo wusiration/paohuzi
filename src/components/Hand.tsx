@@ -166,12 +166,12 @@ export function Hand({
   const flatIndexOf = (cardId: string) => orderedCards.findIndex((c) => c.id === cardId);
 
   const handleDragStart = (card: CardType) => {
-    if (disabled || hidden || !onReorder) return;
+    if (disabled || hidden) return;
     setDragId(card.id);
   };
 
   const handleDragOver = (e: React.DragEvent, targetCard: CardType) => {
-    if (!dragId || dragId === targetCard.id || disabled || hidden || !onReorder) return;
+    if (!dragId || dragId === targetCard.id || disabled || hidden) return;
     e.preventDefault();
 
     const fromIndex = flatIndexOf(dragId);
@@ -183,7 +183,7 @@ export function Hand({
     newCards.splice(toIndex, 0, moved);
     setOrderedCards(newCards);
     setHasReordered(true);
-    onReorder(newCards);
+    onReorder?.(newCards);
   };
 
   const handleDragEnd = () => {
