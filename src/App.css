@@ -411,14 +411,21 @@ body {
 /* 手牌 */
 .hand {
   display: flex;
-  gap: 8px;
+  gap: 14px;
   justify-content: center;
   padding: 10px;
   flex-wrap: nowrap;
 }
 
 .hand-compact {
-  gap: 4px;
+  gap: 6px;
+}
+
+.hand-kan {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
 }
 
 .hand-draggable .hand-card-slot {
@@ -433,10 +440,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.hand-group-gap {
-  margin-left: 18px;
 }
 
 /* 牌张 */
