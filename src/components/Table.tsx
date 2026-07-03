@@ -1,5 +1,5 @@
 import type { Card as CardType } from '../core/types';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Hand } from './Hand';
 import { Meld } from './Meld';
 import { Card } from './Card';
@@ -27,11 +27,46 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
   const [showLog, setShowLog] = useState(false);
   const [showDiscard, setShowDiscard] = useState(false);
   const [viewPlayerId, setViewPlayerId] = useState<string | null>(null);
+  const [handOrder, setHandOrder] = useState<string[]>(() => state.players.find((p) => p.id === 'player')?.hand.map((c) => c.id) || []);
 
   const player = state.players.find((p) => p.id === 'player')!;
   const leftAI = state.players.find((p) => p.seat === (player.seat + 2) % 3)!;
   const rightAI = state.players.find((p) => p.seat === (player.seat + 1) % 3)!;
   const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
+
+  // 同步手牌顺序：保留玩家自定义顺序，同时严格与 player.hand 的 id 集合一致
+  useEffect(() => {
+    const currentIds = player.hand.map((c) => c.id);
+    const currentIdSet = new Set(currentIds);
+
+    // 移除已不存在的 id，保留相对顺序
+    const filteredOrder = handOrder.filter((id) => currentIdSet.has(id));
+    const filteredIdSet = new Set(filteredOrder);
+
+    // 新增牌追加到末尾
+    const newIds = currentIds.filter((id) => !filteredIdSet.has(id));
+    const mergedOrder = [...filteredOrder, ...newIds];
+
+    if (mergedOrder.length !== handOrder.length) {
+      setHandOrder(mergedOrder);
+    }
+  }, [player.hand]);
+
+  const orderedPlayerHand = useMemo(() => {
+    const map = new Map(player.hand.map((c) => [c.id, c]));
+    return handOrder.map((id) => map.get(id)!).filter(Boolean);
+  }, [player.hand, handOrder]);
+
+  const handleReorder = (fromId: string, toId: string) => {
+    const fromIndex = handOrder.indexOf(fromId);
+    const toIndex = handOrder.indexOf(toId);
+    if (fromIndex === -1 || toIndex === -1) return;
+
+    const newOrder = [...handOrder];
+    newOrder.splice(fromIndex, 1);
+    newOrder.splice(toIndex, 0, fromId);
+    setHandOrder(newOrder);
+  };
 
   const isPlayerTurn = state.phase === 'WAIT_DISCARD' && state.currentPlayerId === 'player';
   const isPlayerResponse = state.phase === 'WAIT_RESPONSE' && state.pendingActions.some((a) => a.playerId === 'player');
@@ -123,7 +158,11 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
               {leftAI.isOpenHand && <span className="open-hand-badge">明</span>}
             </div>
             <div className="ai-status">{getStatus(state, leftAI.id)}</div>
-            <button className="view-melds-btn" onClick={() => setViewPlayerId(leftAI.id)}>
+            <button
+              className="view-melds-btn"
+              onClick={() => setViewPlayerId(leftAI.id)}
+              title="查看 AI 落地牌详情"
+            >
               牌型
             </button>
           </div>
@@ -142,7 +181,11 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
               {rightAI.isOpenHand && <span className="open-hand-badge">明</span>}
             </div>
             <div className="ai-status">{getStatus(state, rightAI.id)}</div>
-            <button className="view-melds-btn" onClick={() => setViewPlayerId(rightAI.id)}>
+            <button
+              className="view-melds-btn"
+              onClick={() => setViewPlayerId(rightAI.id)}
+              title="查看 AI 落地牌详情"
+            >
               牌型
             </button>
           </div>
@@ -165,11 +208,19 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
           <div className="player-red">红牌：{player.redCount}</div>
           <div className="player-hand-count">手牌：{player.hand.length}</div>
           {canOpenHand && onOpenHand && (
-            <button className="open-hand-btn" onClick={onOpenHand}>
+            <button
+              className="open-hand-btn"
+              onClick={onOpenHand}
+              title="明牌后所有玩家可见你的手牌，本局胡牌结算翻倍"
+            >
               明牌
             </button>
           )}
-          <button className="view-melds-btn" onClick={() => setViewPlayerId(player.id)}>
+          <button
+            className="view-melds-btn"
+            onClick={() => setViewPlayerId(player.id)}
+            title="查看自己的落地牌详情"
+          >
             牌型
           </button>
         </div>
@@ -186,10 +237,11 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
         )}
         <Hand
           key={state.roundIndex}
-          cards={player.hand}
+          cards={orderedPlayerHand}
           selectable={isPlayerTurn}
           selectedId={selectedCardId || undefined}
           onSelect={handleCardClick}
+          onReorder={handleReorder}
         />
         {isPlayerTurn ? (
           <div className="turn-tip">你的回合，请选择一张牌打出</div>
