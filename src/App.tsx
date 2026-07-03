@@ -50,7 +50,7 @@ function App() {
           />
           音效
         </label>
-        <label className="cheat-toggle">
+        <label className="cheat-toggle" title="开启后可查看 AI 手牌，仅本地可见">
           <input
             type="checkbox"
             checked={cheatMode}
