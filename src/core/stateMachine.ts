@@ -92,12 +92,13 @@ function findNextDealerSeat(state: GameState): number {
   return dealer ? dealer.seat : 0;
 }
 
-function checkInitialTi(state: GameState): GameState {
+export function checkInitialTi(state: GameState): GameState {
   let newState: GameState = { ...state, phase: 'CHECK_INITIAL_TI' };
   for (const player of newState.players) {
     const ti = findInitialTi(player);
     if (ti) {
       newState = applyMeld(newState, player.id, ti);
+      newState = removeCardsFromHand(newState, player.id, ti.cards.map((c) => c.id));
       newState = updatePlayer(newState, player.id, (p) => ({
         ...p,
         paoTiCount: p.paoTiCount + 1,
