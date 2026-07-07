@@ -1,5 +1,10 @@
 # 怀化红拐弯跑胡子（单机版）
 
+[![CI](https://github.com/wusiration/paohuzi/actions/workflows/ci.yml/badge.svg)](https://github.com/wusiration/paohuzi/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite)](https://vitejs.dev/)
+
 基于湖南怀化地区“红拐弯”规则的三人单机跑胡子游戏。
 
 - 1 名真人玩家 vs 2 名 AI 玩家
@@ -31,6 +36,22 @@ npm test
 ```
 
 开发服务器默认地址：`http://localhost:5173`
+
+## 在线试玩
+
+GitHub Pages：[https://wusiration.github.io/paohuzi](https://wusiration.github.io/paohuzi)
+
+> 如需启用 GitHub Pages，请在仓库 Settings → Pages 中将 Source 设置为 "Deploy from a branch"，并选择 `gh-pages` 分支（或通过 GitHub Actions 自动部署）。
+
+## 游戏截图
+
+> TODO：补充牌桌、结算面板、名堂展示等界面截图。
+
+```text
+建议截图尺寸：1280 × 720 左右
+存放位置：docs/screenshots/
+引用方式：![牌桌界面](./docs/screenshots/table.png)
+```
 
 ## 游戏规则摘要
 
@@ -130,3 +151,23 @@ src/
 - 增加 AI 难度与托管功能
 - 本地战绩与对局回放
 - 支持更多怀化地方规则变体
+
+## 贡献指南
+
+欢迎提交 Issue 和 Pull Request。
+
+1. Fork 本仓库
+2. 创建功能分支：`git checkout -b feature/xxx`
+3. 提交改动：`git commit -m "feat: xxx"`
+4. 推送分支：`git push origin feature/xxx`
+5. 提交 Pull Request
+
+提交前请确保：
+
+- `npm test` 通过
+- `npm run lint` 无警告
+- `npm run build` 成功
+
+## 开源协议
+
+本项目采用 [MIT 协议](./LICENSE) 开源。
