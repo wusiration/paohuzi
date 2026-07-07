@@ -1,7 +1,6 @@
 import type { Card as CardType } from '../core/types';
 import { useState, useEffect, useMemo } from 'react';
 import { Hand } from './Hand';
-import { Meld } from './Meld';
 import { Card } from './Card';
 import { ActionPanel } from './ActionPanel';
 import { ChiSelector } from './ChiSelector';
@@ -60,12 +59,33 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
   const handleReorder = (fromId: string, toId: string) => {
     const fromIndex = handOrder.indexOf(fromId);
     const toIndex = handOrder.indexOf(toId);
-    if (fromIndex === -1 || toIndex === -1) return;
+    console.log('reorder', { fromId, toId, fromIndex, toIndex, handOrder });
+    if (fromIndex === -1 || toIndex === -1 || fromId === toId) return;
 
-    const newOrder = [...handOrder];
-    newOrder.splice(fromIndex, 1);
-    newOrder.splice(toIndex, 0, fromId);
-    setHandOrder(newOrder);
+    // 先移除被拖的牌
+    const withoutFrom = [...handOrder];
+    withoutFrom.splice(fromIndex, 1);
+
+    // 重新计算目标牌在新数组中的位置
+    let newToIndex = withoutFrom.indexOf(toId);
+    if (newToIndex === -1) newToIndex = toIndex;
+
+    const targetKanIndex = Math.floor(newToIndex / 3);
+    const targetKanStart = targetKanIndex * 3;
+    const targetKanCards = withoutFrom.slice(targetKanStart, targetKanStart + 3);
+
+    // 如果目标坎未满 3 张，把牌补到该坎末尾
+    let insertIndex: number;
+    if (targetKanCards.length < 3) {
+      insertIndex = targetKanStart + targetKanCards.length;
+    } else {
+      // 否则插到目标牌位置（交换效果）
+      insertIndex = newToIndex;
+    }
+
+    withoutFrom.splice(insertIndex, 0, fromId);
+    console.log('new order', { insertIndex, targetKanIndex, targetKanCardsLength: targetKanCards.length, withoutFrom });
+    setHandOrder(withoutFrom);
   };
 
   const isPlayerTurn = state.phase === 'WAIT_DISCARD' && state.currentPlayerId === 'player';
@@ -167,10 +187,8 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
             </button>
           </div>
           <Hand cards={leftAI.hand} hidden={!cheatMode && !leftAI.isOpenHand} small />
-          <div className="ai-melds">
-            {leftAI.melds.map((meld) => (
-              <Meld key={meld.id} meld={meld} viewerId="player" players={state.players} small />
-            ))}
+          <div className="ai-melds ai-melds-summary">
+            落地牌 {leftAI.melds.length} 组 · {leftAI.huxi}胡
           </div>
         </div>
 
@@ -190,15 +208,21 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
             </button>
           </div>
           <Hand cards={rightAI.hand} hidden={!cheatMode && !rightAI.isOpenHand} small />
-          <div className="ai-melds">
-            {rightAI.melds.map((meld) => (
-              <Meld key={meld.id} meld={meld} viewerId="player" players={state.players} small />
-            ))}
+          <div className="ai-melds ai-melds-summary">
+            落地牌 {rightAI.melds.length} 组 · {rightAI.huxi}胡
           </div>
         </div>
       </div>
 
       <div className="player-area">
+        {isPlayerResponse && (
+          <div className="action-panel action-panel-floating">
+            <ActionPanel
+              actions={state.pendingActions}
+              onAction={handleAction}
+            />
+          </div>
+        )}
         <div className="player-info">
           <div className="player-name">
             {player.name}
@@ -224,17 +248,11 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
             牌型
           </button>
         </div>
-        <div className="player-melds">
-          {player.melds.map((meld) => (
-            <Meld key={meld.id} meld={meld} viewerId="player" players={state.players} />
-          ))}
+        <div className="player-melds player-melds-empty">
+          <span className="player-melds-summary">
+            落地牌 {player.melds.length} 组 · {player.huxi}胡
+          </span>
         </div>
-        {isPlayerResponse && (
-          <ActionPanel
-            actions={state.pendingActions}
-            onAction={handleAction}
-          />
-        )}
         <Hand
           key={state.roundIndex}
           cards={orderedPlayerHand}

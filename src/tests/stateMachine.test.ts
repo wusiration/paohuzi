@@ -44,12 +44,16 @@ describe('状态机', () => {
     expect(state.deck.length).toBe(19);
   });
 
-  it('庄家手牌21张，闲家20张', () => {
+  it('庄家手牌21张，闲家20张（起手四张相同会提成落地牌）', () => {
     const state = startNewGame(createInitialState());
     const dealer = state.players.find((p) => p.isDealer);
     const nonDealers = state.players.filter((p) => !p.isDealer);
-    expect(dealer?.hand.length).toBe(21);
-    expect(nonDealers.every((p) => p.hand.length === 20)).toBe(true);
+    const dealerTotal = (dealer?.hand.length || 0) + (dealer?.melds.reduce((s, m) => s + m.cards.length, 0) || 0);
+    const nonDealerTotals = nonDealers.map(
+      (p) => p.hand.length + p.melds.reduce((s, m) => s + m.cards.length, 0)
+    );
+    expect(dealerTotal).toBe(21);
+    expect(nonDealerTotals.every((n) => n === 20)).toBe(true);
   });
 
   it('庄家为首个currentPlayer', () => {

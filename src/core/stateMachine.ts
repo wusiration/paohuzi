@@ -23,14 +23,12 @@ import { calculateHu, canHu } from './solver';
 import { computeSettlement } from './scoring';
 import { clonePlayer, clonePlayers, createLogId, createPendingActionId, nextPlayerId } from '../utils/helpers';
 
-const ACTION_PRIORITY: Record<string, number> = {
-  ti: 1,
-  wei: 1,
-  hu: 2,
-  pao: 3,
-  peng: 4,
-  chi: 5,
-  pass: 6,
+const RESPONSE_PRIORITY: Record<string, number> = {
+  hu: 1,
+  pao: 2,
+  peng: 3,
+  chi: 4,
+  pass: 5,
 };
 
 export interface ActionPayload {
@@ -182,7 +180,7 @@ function buildResponseActions(
           card,
           sourcePlayerId,
           sourceType,
-          priority: ACTION_PRIORITY.hu,
+          priority: RESPONSE_PRIORITY.hu,
         });
         hasAction = true;
         hasForced = true;
@@ -198,7 +196,7 @@ function buildResponseActions(
         card,
         sourcePlayerId,
         sourceType,
-        priority: ACTION_PRIORITY.pao,
+        priority: RESPONSE_PRIORITY.pao,
       });
       hasAction = true;
       hasForced = true;
@@ -214,7 +212,7 @@ function buildResponseActions(
         card,
         sourcePlayerId,
         sourceType,
-        priority: ACTION_PRIORITY.peng,
+        priority: RESPONSE_PRIORITY.peng,
       });
       hasAction = true;
     }
@@ -230,7 +228,7 @@ function buildResponseActions(
         sourcePlayerId,
         sourceType,
         options: chiResult.options,
-        priority: ACTION_PRIORITY.chi,
+        priority: RESPONSE_PRIORITY.chi,
       });
       hasAction = true;
     }
@@ -244,7 +242,7 @@ function buildResponseActions(
         card,
         sourcePlayerId,
         sourceType,
-        priority: ACTION_PRIORITY.pass,
+        priority: RESPONSE_PRIORITY.pass,
       });
     }
   }
@@ -367,7 +365,7 @@ function buildDrawRevealResponseActions(state: GameState, card: Card, sourcePlay
           sourcePlayerId,
           sourceType: 'drawReveal',
           options: chiResult.options,
-          priority: ACTION_PRIORITY.chi,
+          priority: RESPONSE_PRIORITY.chi,
         });
         hasAction = true;
       }
@@ -381,7 +379,7 @@ function buildDrawRevealResponseActions(state: GameState, card: Card, sourcePlay
           card,
           sourcePlayerId,
           sourceType: 'drawReveal',
-          priority: ACTION_PRIORITY.hu,
+          priority: RESPONSE_PRIORITY.hu,
         });
         hasAction = true;
         hasForced = true;
@@ -396,7 +394,7 @@ function buildDrawRevealResponseActions(state: GameState, card: Card, sourcePlay
           card,
           sourcePlayerId,
           sourceType: 'drawReveal',
-          priority: ACTION_PRIORITY.pao,
+          priority: RESPONSE_PRIORITY.pao,
         });
         hasAction = true;
         hasForced = true;
@@ -412,7 +410,7 @@ function buildDrawRevealResponseActions(state: GameState, card: Card, sourcePlay
           card,
           sourcePlayerId,
           sourceType: 'drawReveal',
-          priority: ACTION_PRIORITY.peng,
+          priority: RESPONSE_PRIORITY.peng,
         });
         hasAction = true;
       }
@@ -428,7 +426,7 @@ function buildDrawRevealResponseActions(state: GameState, card: Card, sourcePlay
           sourcePlayerId,
           sourceType: 'drawReveal',
           options: chiResult.options,
-          priority: ACTION_PRIORITY.chi,
+          priority: RESPONSE_PRIORITY.chi,
         });
         hasAction = true;
       }
@@ -442,7 +440,7 @@ function buildDrawRevealResponseActions(state: GameState, card: Card, sourcePlay
         card,
         sourcePlayerId,
         sourceType: 'drawReveal',
-        priority: ACTION_PRIORITY.pass,
+        priority: RESPONSE_PRIORITY.pass,
       });
     }
   }
