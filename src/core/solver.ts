@@ -81,7 +81,6 @@ function searchSplit(
   hand: Card[],
   ownerId: string,
   isZiMo: boolean,
-  hasPair: boolean,
   usedPair: boolean,
   cache: Map<string, SplitResult>
 ): SplitResult {
@@ -101,7 +100,7 @@ function searchSplit(
     if (group.type === 'pair') {
       if (usedPair) continue;
       const remaining = removeCards(hand, group.cards);
-      const sub = searchSplit(remaining, ownerId, isZiMo, true, true, cache);
+      const sub = searchSplit(remaining, ownerId, isZiMo, true, cache);
       if (sub.valid) {
         const pairMeld = makeMeld('pair', group.cards, ownerId);
         const candidate: SplitResult = {
@@ -114,7 +113,7 @@ function searchSplit(
       }
     } else {
       const remaining = removeCards(hand, group.cards);
-      const sub = searchSplit(remaining, ownerId, isZiMo, hasPair, usedPair, cache);
+      const sub = searchSplit(remaining, ownerId, isZiMo, usedPair, cache);
       if (sub.valid) {
         const meld = makeMeld(group.type, group.cards, ownerId);
         const candidate: SplitResult = {
@@ -136,7 +135,7 @@ function searchSplit(
 export function splitHand(hand: Card[], ownerId: string, requirePair: boolean, isZiMo: boolean = false): SplitResult {
   const sorted = hand.slice().sort(cardSort);
   const cache = new Map<string, SplitResult>();
-  const result = searchSplit(sorted, ownerId, isZiMo, false, false, cache);
+  const result = searchSplit(sorted, ownerId, isZiMo, false, cache);
   if (!result.valid) return result;
   if (requirePair && !result.pair) return { valid: false, melds: [], huxi: 0 };
   return result;

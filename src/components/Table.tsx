@@ -49,7 +49,7 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
     if (mergedOrder.length !== handOrder.length) {
       setHandOrder(mergedOrder);
     }
-  }, [player.hand]);
+  }, [player.hand, handOrder]);
 
   const orderedPlayerHand = useMemo(() => {
     const map = new Map(player.hand.map((c) => [c.id, c]));
@@ -59,7 +59,6 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
   const handleReorder = (fromId: string, toId: string) => {
     const fromIndex = handOrder.indexOf(fromId);
     const toIndex = handOrder.indexOf(toId);
-    console.log('reorder', { fromId, toId, fromIndex, toIndex, handOrder });
     if (fromIndex === -1 || toIndex === -1 || fromId === toId) return;
 
     // 先移除被拖的牌
@@ -84,7 +83,6 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
     }
 
     withoutFrom.splice(insertIndex, 0, fromId);
-    console.log('new order', { insertIndex, targetKanIndex, targetKanCardsLength: targetKanCards.length, withoutFrom });
     setHandOrder(withoutFrom);
   };
 
