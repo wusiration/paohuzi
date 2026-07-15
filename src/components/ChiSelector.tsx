@@ -13,7 +13,7 @@ export function ChiSelector({ action, onSelect, onCancel }: ChiSelectorProps) {
   return (
     <div className="chi-selector-overlay">
       <div className="chi-selector">
-        <h3>请选择吃法</h3>
+        <h3>{action.options.length > 1 ? '请选择吃法' : '确认吃牌'}</h3>
         <div className="chi-options">
           {action.options.map((option) => (
             <button

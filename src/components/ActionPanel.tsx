@@ -38,14 +38,7 @@ export function ActionPanel({ actions, onAction }: ActionPanelProps) {
         <button
           key={action.id}
           className={`action-btn action-${action.actionType}`}
-          onClick={() => {
-            if (action.actionType === 'chi' && action.options && action.options.length > 1) {
-              // 多种吃法通过外部选择器处理，这里选默认第一种
-              onAction(action.id, action.options[0].id);
-            } else {
-              onAction(action.id);
-            }
-          }}
+          onClick={() => onAction(action.id)}
         >
           {getLabel(action)}
         </button>

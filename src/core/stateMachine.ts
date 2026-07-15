@@ -1,5 +1,5 @@
 import type { Card, GameState, Meld, PendingAction, PlayerState, SourceType } from './types';
-import { createInitialGameDeck, dealCards, sortHand } from './deck';
+import { createInitialGameDeck, dealCards } from './deck';
 import {
   buildChiMeld,
   buildChouWeiMeld,
@@ -127,8 +127,9 @@ export function discardCard(state: GameState, playerId: string, cardId: string):
   const card = player.hand[cardIndex];
   const newHand = player.hand.slice();
   newHand.splice(cardIndex, 1);
+  const newOrder = (player.handOrder || player.hand.map((c) => c.id)).filter((id) => id !== cardId);
 
-  let newState = updatePlayer(state, playerId, (p) => ({ ...p, hand: sortHand(newHand) }));
+  let newState = updatePlayer(state, playerId, (p) => ({ ...p, hand: newHand, handOrder: newOrder }));
   newState = {
     ...newState,
     lastDiscard: card,
@@ -729,7 +730,7 @@ function computePlayerStats(p: PlayerState): Partial<PlayerState> {
 
 function applyMeld(state: GameState, playerId: string, meld: Meld): GameState {
   return updatePlayer(state, playerId, (p) => {
-    const updated = { ...p, melds: [...p.melds, meld], hand: sortHand(p.hand) };
+    const updated = { ...p, melds: [...p.melds, meld] };
     return { ...updated, ...computePlayerStats(updated) };
   });
 }
@@ -744,7 +745,11 @@ function removeMeld(state: GameState, playerId: string, meldId: string): GameSta
 function removeCardsFromHand(state: GameState, playerId: string, cardIds: string[]): GameState {
   const idSet = new Set(cardIds);
   return updatePlayer(state, playerId, (p) => {
-    const updated = { ...p, hand: sortHand(p.hand.filter((c) => !idSet.has(c.id))) };
+    const order = p.handOrder || p.hand.map((c) => c.id);
+    const newOrder = order.filter((id) => !idSet.has(id));
+    const handMap = new Map(p.hand.map((c) => [c.id, c]));
+    const newHand = newOrder.map((id) => handMap.get(id)!).filter(Boolean);
+    const updated = { ...p, hand: newHand, handOrder: newOrder };
     return { ...updated, ...computePlayerStats(updated) };
   });
 }
@@ -773,6 +778,16 @@ function addLog(
       },
     ],
   };
+}
+
+export function updatePlayerHandOrder(state: GameState, playerId: string, handOrder: string[]): GameState {
+  const player = state.players.find((p) => p.id === playerId);
+  if (!player) return state;
+  const handSet = new Set(player.hand.map((c) => c.id));
+  const validOrder = handOrder.filter((id) => handSet.has(id));
+  const missing = player.hand.map((c) => c.id).filter((id) => !validOrder.includes(id));
+  const finalOrder = [...validOrder, ...missing];
+  return updatePlayer(state, playerId, (p) => ({ ...p, handOrder: finalOrder }));
 }
 
 function cardLabel(card: Card): string {

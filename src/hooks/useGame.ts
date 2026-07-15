@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameState } from '../core/types';
-import { createInitialState, discardCard, executeAction, startNewGame, startNextRound, toggleOpenHand } from '../core/stateMachine';
+import { createInitialState, discardCard, executeAction, startNewGame, startNextRound, toggleOpenHand, updatePlayerHandOrder } from '../core/stateMachine';
 import { chooseDiscard, decideAction, isAIPlayer, shouldOpenHand } from '../core/ai';
 import { soundManager } from '../audio/soundManager';
 
@@ -51,6 +51,10 @@ export function useGame() {
 
   const doOpenHand = useCallback(() => {
     setState((prev) => toggleOpenHand(prev, 'player'));
+  }, []);
+
+  const updateHandOrder = useCallback((playerId: string, handOrder: string[]) => {
+    setState((prev) => updatePlayerHandOrder(prev, playerId, handOrder));
   }, []);
 
   // AI 自动执行
@@ -147,5 +151,6 @@ export function useGame() {
     setFastMode,
     setSoundEnabled,
     setCheatMode,
+    updateHandOrder,
   };
 }

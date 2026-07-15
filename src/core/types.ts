@@ -38,6 +38,7 @@ export interface PlayerState {
   name: string;
   seat: number;
   hand: Card[];
+  handOrder?: string[];
   melds: Meld[];
   score: number;
   huxi: number;

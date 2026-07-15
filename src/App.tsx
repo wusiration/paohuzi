@@ -5,7 +5,7 @@ import './App.css';
 
 function App() {
   const game = useGame();
-  const { state, started, aiDelayEnabled, fastMode, soundEnabled, cheatMode, start, restart, reset, doDiscard, doAction, doOpenHand, setAiDelayEnabled, setFastMode, setSoundEnabled, setCheatMode } = game;
+  const { state, started, aiDelayEnabled, fastMode, soundEnabled, cheatMode, start, restart, reset, doDiscard, doAction, doOpenHand, setAiDelayEnabled, setFastMode, setSoundEnabled, setCheatMode, updateHandOrder } = game;
 
   if (!started) {
     return (
@@ -69,6 +69,7 @@ function App() {
         onAction={doAction}
         onNextRound={restart}
         onOpenHand={doOpenHand}
+        onHandOrderChange={updateHandOrder}
       />
     </div>
   );

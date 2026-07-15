@@ -4,12 +4,14 @@ import { Hand } from './Hand';
 import { Card } from './Card';
 import { ActionPanel } from './ActionPanel';
 import { ChiSelector } from './ChiSelector';
+import { PengConfirm } from './PengConfirm';
 import { Settlement } from './Settlement';
 import { ScorePanel } from './ScorePanel';
 import { GameLog } from './GameLog';
 import { DiscardPile } from './DiscardPile';
 import { PlayerMeldsPanel } from './PlayerMeldsPanel';
 import type { GameState } from '../core/types';
+import { isSameCard } from '../core/rules';
 
 interface TableProps {
   state: GameState;
@@ -18,38 +20,38 @@ interface TableProps {
   onAction: (actionId: string, optionId?: string) => void;
   onNextRound: () => void;
   onOpenHand?: () => void;
+  onHandOrderChange?: (playerId: string, handOrder: string[]) => void;
 }
 
-export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOpenHand }: TableProps) {
+export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOpenHand, onHandOrderChange }: TableProps) {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [chiAction, setChiAction] = useState<import('../core/types').PendingAction | null>(null);
+  const [pengAction, setPengAction] = useState<import('../core/types').PendingAction | null>(null);
   const [showLog, setShowLog] = useState(false);
   const [showDiscard, setShowDiscard] = useState(false);
   const [viewPlayerId, setViewPlayerId] = useState<string | null>(null);
-  const [handOrder, setHandOrder] = useState<string[]>(() => state.players.find((p) => p.id === 'player')?.hand.map((c) => c.id) || []);
+  const [handOrder, setHandOrder] = useState<string[]>(() => state.players.find((p) => p.id === 'player')?.handOrder || state.players.find((p) => p.id === 'player')?.hand.map((c) => c.id) || []);
 
   const player = state.players.find((p) => p.id === 'player')!;
   const leftAI = state.players.find((p) => p.seat === (player.seat + 2) % 3)!;
   const rightAI = state.players.find((p) => p.seat === (player.seat + 1) % 3)!;
   const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
 
-  // 同步手牌顺序：保留玩家自定义顺序，同时严格与 player.hand 的 id 集合一致
+  // 同步手牌顺序：外部 handOrder 优先，缺失的牌追加到末尾
   useEffect(() => {
     const currentIds = player.hand.map((c) => c.id);
     const currentIdSet = new Set(currentIds);
+    const externalOrder = player.handOrder || [];
 
-    // 移除已不存在的 id，保留相对顺序
-    const filteredOrder = handOrder.filter((id) => currentIdSet.has(id));
+    const filteredOrder = externalOrder.filter((id) => currentIdSet.has(id));
     const filteredIdSet = new Set(filteredOrder);
-
-    // 新增牌追加到末尾
     const newIds = currentIds.filter((id) => !filteredIdSet.has(id));
     const mergedOrder = [...filteredOrder, ...newIds];
 
-    if (mergedOrder.length !== handOrder.length) {
+    if (JSON.stringify(mergedOrder) !== JSON.stringify(handOrder)) {
       setHandOrder(mergedOrder);
     }
-  }, [player.hand, handOrder]);
+  }, [player.hand, player.handOrder]);
 
   const orderedPlayerHand = useMemo(() => {
     const map = new Map(player.hand.map((c) => [c.id, c]));
@@ -83,7 +85,9 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
     }
 
     withoutFrom.splice(insertIndex, 0, fromId);
-    setHandOrder(withoutFrom);
+    const newOrder = withoutFrom;
+    setHandOrder(newOrder);
+    onHandOrderChange?.('player', newOrder);
   };
 
   const isPlayerTurn = state.phase === 'WAIT_DISCARD' && state.currentPlayerId === 'player';
@@ -92,18 +96,26 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
 
   const handleCardClick = (card: CardType) => {
     if (!isPlayerTurn) return;
-    if (selectedCardId === card.id) {
-      onDiscard(card.id);
+    setSelectedCardId(card.id);
+  };
+
+  const handleDiscard = () => {
+    if (selectedCardId) {
+      onDiscard(selectedCardId);
       setSelectedCardId(null);
-    } else {
-      setSelectedCardId(card.id);
     }
   };
 
   const handleAction = (actionId: string, optionId?: string) => {
     const action = state.pendingActions.find((a) => a.id === actionId);
-    if (action?.actionType === 'chi' && action.options && action.options.length > 1) {
+    if (!action) return;
+
+    if (action.actionType === 'chi') {
       setChiAction(action);
+      return;
+    }
+    if (action.actionType === 'peng') {
+      setPengAction(action);
       return;
     }
     onAction(actionId, optionId);
@@ -114,6 +126,17 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
       onAction(chiAction.id, optionId);
       setChiAction(null);
     }
+  };
+
+  const handlePengConfirm = () => {
+    if (pengAction) {
+      onAction(pengAction.id);
+      setPengAction(null);
+    }
+  };
+
+  const handlePengCancel = () => {
+    setPengAction(null);
   };
 
   if (state.phase === 'SETTLEMENT') {
@@ -213,14 +236,6 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
       </div>
 
       <div className="player-area">
-        {isPlayerResponse && (
-          <div className="action-panel action-panel-floating">
-            <ActionPanel
-              actions={state.pendingActions}
-              onAction={handleAction}
-            />
-          </div>
-        )}
         <div className="player-info">
           <div className="player-name">
             {player.name}
@@ -229,6 +244,9 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
           <div className="player-huxi">胡息：{player.huxi}</div>
           <div className="player-red">红牌：{player.redCount}</div>
           <div className="player-hand-count">手牌：{player.hand.length}</div>
+          <span className="player-melds-summary">
+            落地牌 {player.melds.length} 组
+          </span>
           {canOpenHand && onOpenHand && (
             <button
               className="open-hand-btn"
@@ -246,11 +264,14 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
             牌型
           </button>
         </div>
-        <div className="player-melds player-melds-empty">
-          <span className="player-melds-summary">
-            落地牌 {player.melds.length} 组 · {player.huxi}胡
-          </span>
-        </div>
+        {isPlayerResponse && (
+          <div className="action-panel action-panel-inline">
+            <ActionPanel
+              actions={state.pendingActions}
+              onAction={handleAction}
+            />
+          </div>
+        )}
         <Hand
           key={state.roundIndex}
           cards={orderedPlayerHand}
@@ -260,7 +281,15 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
           onReorder={handleReorder}
         />
         {isPlayerTurn ? (
-          <div className="turn-tip">你的回合，请选择一张牌打出</div>
+          selectedCardId ? (
+            <div className="turn-tip">
+              <button className="discard-confirm-btn" onClick={handleDiscard}>
+                打出
+              </button>
+            </div>
+          ) : (
+            <div className="turn-tip">你的回合，请选择一张牌打出</div>
+          )
         ) : isPlayerResponse ? (
           <div className="turn-tip">响应阶段：请选择是否吃/碰/胡/过</div>
         ) : (
@@ -273,6 +302,14 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
           action={chiAction}
           onSelect={handleChiSelect}
           onCancel={() => setChiAction(null)}
+        />
+      )}
+      {pengAction && (
+        <PengConfirm
+          action={pengAction}
+          handCards={player.hand.filter((c) => isSameCard(c, pengAction.card)).slice(0, 2)}
+          onConfirm={handlePengConfirm}
+          onCancel={handlePengCancel}
         />
       )}
       {showLog && <GameLog state={state} onClose={() => setShowLog(false)} />}

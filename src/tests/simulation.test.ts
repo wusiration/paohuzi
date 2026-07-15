@@ -128,14 +128,15 @@ describe('模拟对局检测', () => {
     expect(noDrawGames).toBe(0);
   });
 
-  it('庄家应持有 21 张牌，闲家 20 张', () => {
+  it('庄家应持有 21 张牌，闲家 20 张（起手四张相同会提成落地牌）', () => {
     let state = createInitialState();
     state = startNewGame(state);
     for (const player of state.players) {
+      const total = player.hand.length + player.melds.reduce((s, m) => s + m.cards.length, 0);
       if (player.isDealer) {
-        expect(player.hand.length).toBe(21);
+        expect(total).toBe(21);
       } else {
-        expect(player.hand.length).toBe(20);
+        expect(total).toBe(20);
       }
     }
     expect(state.deck.length).toBe(19);

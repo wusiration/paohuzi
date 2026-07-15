@@ -57,8 +57,10 @@ export function Hand({
 
   let cardIndex = 0;
 
+  const handClass = `hand ${onReorder && !hidden ? 'hand-draggable' : ''} ${small ? 'hand-small' : ''}`;
+
   return (
-    <div className={`hand ${onReorder && !hidden ? 'hand-draggable' : ''}`}>
+    <div className={handClass}>
       {groups.map((group, groupIndex) => (
         <div key={`kan-${groupIndex}`} className="hand-kan">
           {Array.from({ length: 3 }).map((_, slotIndex) => {
