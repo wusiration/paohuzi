@@ -66,6 +66,7 @@ export function startNewGame(state: GameState): GameState {
     currentPlayerId: dealer.id,
     deck: remainingDeck,
     players,
+    bottomCard: remainingDeck[remainingDeck.length - 1],
     revealedCard: undefined,
     lastDiscard: undefined,
     lastDiscardPlayerId: undefined,
@@ -75,7 +76,7 @@ export function startNewGame(state: GameState): GameState {
     settlement: undefined,
   };
 
-  newState = addLog(newState, 'system', 'system', 'START', undefined, `第${newState.roundIndex}局开始，庄家：${dealer.name}`);
+  newState = addLog(newState, 'system', 'system', 'START', undefined, `第${newState.roundIndex}局开始，庄家：${dealer.name}，挡底：${cardLabel(newState.bottomCard!)}`);
 
   // 检查起手提
   return checkInitialTi(newState);
@@ -218,9 +219,9 @@ function buildResponseActions(
       hasAction = true;
     }
 
-    // 吃
+    // 吃（臭牌不能再吃）
     const chiResult = canChi(context, state.players);
-    if (chiResult.can) {
+    if (chiResult.can && !player.passedChiRanks.includes(`${card.suit}-${card.rank}`)) {
       actions.push({
         id: createPendingActionId(),
         playerId: player.id,
@@ -273,6 +274,8 @@ export function drawCard(state: GameState, playerId: string): GameState {
   let newState: GameState = {
     ...state,
     deck: newDeck,
+    // 挡底被摸走后清除展示
+    bottomCard: newDeck.length === 0 ? undefined : state.bottomCard,
     revealedCard: card,
     currentPlayerId: playerId,
     turnCount: state.turnCount + 1,
@@ -416,9 +419,9 @@ function buildDrawRevealResponseActions(state: GameState, card: Card, sourcePlay
         hasAction = true;
       }
 
-      // 吃：下家可吃
+      // 吃：下家可吃（臭牌不能再吃）
       const chiResult = canChi(context, state.players);
-      if (chiResult.can) {
+      if (chiResult.can && !player.passedChiRanks.includes(`${card.suit}-${card.rank}`)) {
         actions.push({
           id: createPendingActionId(),
           playerId: player.id,
@@ -493,7 +496,7 @@ function executeActionInternal(
       return executeChi(state, playerId, card, action, optionId);
     }
     case 'pass': {
-      return executePass(state, playerId, card, action);
+      return executePass(state, playerId, card);
     }
     default:
       return state;
@@ -623,18 +626,29 @@ function executeChi(state: GameState, playerId: string, card: Card, action?: Pen
   return transitionToDiscard(newState, playerId);
 }
 
-function executePass(state: GameState, playerId: string, card: Card, action?: PendingAction): GameState {
+function executePass(state: GameState, playerId: string, card: Card): GameState {
   let newState = state;
+  const key = `${card.suit}-${card.rank}`;
+  // 以该玩家本轮待响应动作为准记录“过”掉的自愿动作：
+  // 漏碰（同牌不能再碰、只能臭偎）、漏胡、漏吃（臭牌，同牌不能再吃）
+  const myPending = state.pendingActions.filter((a) => a.playerId === playerId);
 
-  if (action?.actionType === 'peng') {
+  if (myPending.some((a) => a.actionType === 'peng')) {
     newState = updatePlayer(newState, playerId, (p) => ({
       ...p,
-      passedPengRanks: [...p.passedPengRanks, `${card.suit}-${card.rank}`],
+      passedPengRanks: [...p.passedPengRanks, key],
     }));
-  } else if (action?.actionType === 'hu') {
+  }
+  if (myPending.some((a) => a.actionType === 'hu')) {
     newState = updatePlayer(newState, playerId, (p) => ({
       ...p,
-      passedHuRanks: [...p.passedHuRanks, `${card.suit}-${card.rank}`],
+      passedHuRanks: [...p.passedHuRanks, key],
+    }));
+  }
+  if (myPending.some((a) => a.actionType === 'chi')) {
+    newState = updatePlayer(newState, playerId, (p) => ({
+      ...p,
+      passedChiRanks: [...p.passedChiRanks, key],
     }));
   }
 

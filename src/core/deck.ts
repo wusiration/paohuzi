@@ -74,6 +74,7 @@ export function dealCards(deck: Card[], dealerSeat: number): {
       paoTiCount: 0,
       passedPengRanks: [],
       passedHuRanks: [],
+      passedChiRanks: [],
       isAI: id !== 'player',
       isDealer: index === dealerSeat,
       isOpenHand: false,

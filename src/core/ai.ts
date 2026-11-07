@@ -286,6 +286,8 @@ function buildVisibility(state: GameState, selfId: string): Map<string, number> 
   }
   // 响应窗口内的明牌尚未落入日志
   if (state.revealedCard) add(state.revealedCard);
+  // 挡底为公开信息
+  if (state.bottomCard) add(state.bottomCard);
 
   return map;
 }

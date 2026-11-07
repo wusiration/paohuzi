@@ -169,6 +169,12 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
           </button>
         </div>
         <div className="header-center">
+          {state.bottomCard && (
+            <div className="bottom-card-area" title="挡底：牌墩最后一张，对所有玩家公开">
+              <span>挡底</span>
+              <Card card={state.bottomCard} small />
+            </div>
+          )}
           {state.revealedCard && (
             <div className="revealed-card-area">
               <span>明牌</span>

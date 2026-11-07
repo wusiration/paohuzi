@@ -46,6 +46,8 @@ export interface PlayerState {
   paoTiCount: number;
   passedPengRanks: string[];
   passedHuRanks: string[];
+  /** 臭牌：可吃而未吃的牌，之后同牌不能再吃（仍可胡） */
+  passedChiRanks: string[];
   isAI: boolean;
   isDealer: boolean;
   isOpenHand: boolean;
@@ -91,6 +93,8 @@ export interface GameState {
   dealerId: string;
   currentPlayerId: string;
   deck: Card[];
+  /** 挡底：发牌后亮出的墩底牌（仍在牌墩中，最后一个被摸走） */
+  bottomCard?: Card;
   revealedCard?: Card;
   lastDiscard?: Card;
   lastDiscardPlayerId?: string;

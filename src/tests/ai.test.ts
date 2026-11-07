@@ -29,6 +29,7 @@ function makePlayer(id: string, hand: Card[], over: Partial<PlayerState> = {}): 
     paoTiCount: 0,
     passedPengRanks: [],
     passedHuRanks: [],
+    passedChiRanks: [],
     isAI: true,
     isDealer: false,
     isOpenHand: false,

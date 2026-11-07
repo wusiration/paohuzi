@@ -108,6 +108,7 @@ export function clonePlayer(player: PlayerState): PlayerState {
     melds: player.melds.map((m) => ({ ...m, cards: m.cards.map((c) => ({ ...c })) })),
     passedPengRanks: [...player.passedPengRanks],
     passedHuRanks: [...player.passedHuRanks],
+    passedChiRanks: [...player.passedChiRanks],
   };
 }
 

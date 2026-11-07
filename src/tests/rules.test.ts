@@ -19,6 +19,7 @@ function makePlayer(hand: Card[]): PlayerState {
     paoTiCount: 0,
     passedPengRanks: [],
     passedHuRanks: [],
+    passedChiRanks: [],
     isAI: false,
     isDealer: true,
     isOpenHand: false,

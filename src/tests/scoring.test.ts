@@ -86,9 +86,9 @@ describe('囤数与结算', () => {
   it('15胡自摸按2囤', () => {
     const hu = makeHuResult({ huxi: 15, isZiMo: true });
     const players = [
-      { id: 'player', name: '我', seat: 0, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: false, isDealer: true, isOpenHand: false },
-      { id: 'ai-1', name: 'AI左', seat: 1, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: true, isDealer: false, isOpenHand: false },
-      { id: 'ai-2', name: 'AI右', seat: 2, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: true, isDealer: false, isOpenHand: false },
+      { id: 'player', name: '我', seat: 0, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], passedChiRanks: [], isAI: false, isDealer: true, isOpenHand: false },
+      { id: 'ai-1', name: 'AI左', seat: 1, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], passedChiRanks: [], isAI: true, isDealer: false, isOpenHand: false },
+      { id: 'ai-2', name: 'AI右', seat: 2, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], passedChiRanks: [], isAI: true, isDealer: false, isOpenHand: false },
     ];
     const winner = players[0];
     const result = computeSettlement(winner, hu, players, 1, 1, 0);
@@ -98,9 +98,9 @@ describe('囤数与结算', () => {
   it('18胡胡别人明牌不加自摸囤', () => {
     const hu = makeHuResult({ huxi: 18, isZiMo: false });
     const players = [
-      { id: 'player', name: '我', seat: 0, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: false, isDealer: true, isOpenHand: false },
-      { id: 'ai-1', name: 'AI左', seat: 1, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: true, isDealer: false, isOpenHand: false },
-      { id: 'ai-2', name: 'AI右', seat: 2, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: true, isDealer: false, isOpenHand: false },
+      { id: 'player', name: '我', seat: 0, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], passedChiRanks: [], isAI: false, isDealer: true, isOpenHand: false },
+      { id: 'ai-1', name: 'AI左', seat: 1, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], passedChiRanks: [], isAI: true, isDealer: false, isOpenHand: false },
+      { id: 'ai-2', name: 'AI右', seat: 2, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], passedChiRanks: [], isAI: true, isDealer: false, isOpenHand: false },
     ];
     const winner = players[0];
     const result = computeSettlement(winner, hu, players, 1, 1, 0);
@@ -118,9 +118,9 @@ describe('囤数与结算', () => {
       ],
     });
     const players = [
-      { id: 'player', name: '我', seat: 0, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: false, isDealer: false, isOpenHand: true },
-      { id: 'ai-1', name: 'AI左', seat: 1, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: true, isDealer: false, isOpenHand: false },
-      { id: 'ai-2', name: 'AI右', seat: 2, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], isAI: true, isDealer: false, isOpenHand: false },
+      { id: 'player', name: '我', seat: 0, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], passedChiRanks: [], isAI: false, isDealer: false, isOpenHand: true },
+      { id: 'ai-1', name: 'AI左', seat: 1, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], passedChiRanks: [], isAI: true, isDealer: false, isOpenHand: false },
+      { id: 'ai-2', name: 'AI右', seat: 2, hand: [], melds: [], score: 0, huxi: 0, redCount: 0, paoTiCount: 0, passedPengRanks: [], passedHuRanks: [], passedChiRanks: [], isAI: true, isDealer: false, isOpenHand: false },
     ];
     const winner = players[0];
     const result = computeSettlement(winner, hu, players, 1, 2, 10);
