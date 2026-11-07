@@ -1,7 +1,7 @@
 import type { Card, ChiOption, GameState, Meld, PendingAction, PlayerState } from './types';
 import { cardKey } from './types';
 import { hasPaoOrTi } from './solver';
-import { analyzeHand, estimateDistance, HU_HUXI_THRESHOLD, type HandAnalysis } from './ting';
+import { analyzeHand, analyzeHandDual, estimateDistance, HU_HUXI_THRESHOLD, SOLID_HU_THRESHOLD, type HandAnalysis } from './ting';
 import { huxiForMeld } from '../utils/helpers';
 
 export interface AIDecision {
@@ -10,9 +10,6 @@ export interface AIDecision {
   cardId?: string;
   openHand?: boolean;
 }
-
-/** 非自摸稳胡线：18 胡息可平胡 */
-const SOLID_HU_THRESHOLD = 18;
 
 interface RichAnalysis extends HandAnalysis {
   /** 按剩余可摸张数加权的有效胡牌张数 */
@@ -243,15 +240,15 @@ function richAnalyze(
   baseHuxi: number,
   visible: Map<string, number>
 ): RichAnalysis {
-  const analysis = analyzeHand(hand, requirePair, baseHuxi);
+  const dual = analyzeHandDual(hand, requirePair, baseHuxi);
+  const analysis = dual.normal;
   const effectiveCount = analysis.winningKeys.reduce(
     (sum, key) => sum + Math.max(0, 4 - (visible.get(key) ?? 0)),
     0
   );
-  // 稳听：18 胡息线，胡牌机会不再局限于自摸
-  const solid = analyzeHand(hand, requirePair, baseHuxi, SOLID_HU_THRESHOLD);
+  // 稳听：18 胡息线，胡牌机会不再局限于自摸（与 15 线同一次枚举得出）
   const { distance } = estimateDistance(hand, requirePair);
-  return { ...analysis, effectiveCount, solidCount: solid.winningCount, distance };
+  return { ...analysis, effectiveCount, solidCount: dual.solid.winningCount, distance };
 }
 
 function analyze(player: PlayerState): HandAnalysis {

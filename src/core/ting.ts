@@ -12,6 +12,9 @@ import { splitHand } from './solver';
 /** 起胡胡息门槛。AI 用自摸线（15）作为"可胡潜力"的保守估计。 */
 export const HU_HUXI_THRESHOLD = 15;
 
+/** 稳听线：18 胡息可胡他人明牌。 */
+export const SOLID_HU_THRESHOLD = 18;
+
 export interface HandAnalysis {
   /** 是否听牌：摸进一张即可达到起胡门槛 */
   isTing: boolean;
@@ -19,6 +22,13 @@ export interface HandAnalysis {
   winningKeys: string[];
   /** 能胡的牌型种数 */
   winningCount: number;
+}
+
+export interface DualAnalysis {
+  /** 15 胡息线（自摸潜力） */
+  normal: HandAnalysis;
+  /** 18 胡息线（稳听，可胡他人明牌） */
+  solid: HandAnalysis;
 }
 
 export interface DistanceEstimate {
@@ -163,6 +173,48 @@ export function clearAnalysisCache(): void {
   analysisCache.clear();
   splitCache.clear();
   distanceCache.clear();
+  dualCache.clear();
+}
+
+const dualCache = new Map<string, DualAnalysis>();
+
+/**
+ * 双阈值分析：一次摸牌枚举同时统计 15/18 两条胡息线的胡牌张，
+ * 比分别调用两次 analyzeHand 省一半拆分成本。
+ */
+export function analyzeHandDual(hand: Card[], requirePair: boolean, baseHuxi: number): DualAnalysis {
+  const signature = handSignature(hand, requirePair, baseHuxi, -1);
+  const cached = dualCache.get(signature);
+  if (cached) return cached;
+
+  const countByType = new Map<string, number>();
+  for (const card of hand) {
+    const key = cardKey(card);
+    countByType.set(key, (countByType.get(key) ?? 0) + 1);
+  }
+
+  const normalKeys: string[] = [];
+  const solidKeys: string[] = [];
+  for (const type of relevantTypes(hand)) {
+    const key = `${type.suit}-${type.rank}`;
+    if ((countByType.get(key) ?? 0) >= 4) continue;
+
+    const probe = [...hand, makeProbeCard(type)];
+    const split = quickSplit(probe, requirePair);
+    if (!split.valid) continue;
+
+    const totalHuxi = baseHuxi + split.huxi;
+    if (totalHuxi >= HU_HUXI_THRESHOLD) normalKeys.push(key);
+    if (totalHuxi >= SOLID_HU_THRESHOLD) solidKeys.push(key);
+  }
+
+  const result: DualAnalysis = {
+    normal: { isTing: normalKeys.length > 0, winningKeys: normalKeys, winningCount: normalKeys.length },
+    solid: { isTing: solidKeys.length > 0, winningKeys: solidKeys, winningCount: solidKeys.length },
+  };
+  if (dualCache.size >= CACHE_LIMIT) dualCache.clear();
+  dualCache.set(signature, result);
+  return result;
 }
 
 // ---------------------------------------------------------------------------
