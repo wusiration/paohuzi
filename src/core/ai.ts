@@ -125,9 +125,10 @@ function crossesThreshold(before: number, after: number): boolean {
   );
 }
 
-function chooseChiOption(_state: GameState, player: PlayerState, options: ChiOption[]): ChiOption | null {
+function chooseChiOption(state: GameState, player: PlayerState, options: ChiOption[]): ChiOption | null {
   const requirePair = hasPaoOrTi(player.melds);
-  const analysis = analyze(player);
+  const visible = buildVisibility(state, player.id);
+  const current = richAnalyze(player.hand, requirePair, player.huxi, visible);
   let best: ChiOption | null = null;
   let bestScore = -Infinity;
 
@@ -140,24 +141,21 @@ function chooseChiOption(_state: GameState, player: PlayerState, options: ChiOpt
     const keptRedCount = countRedInHandAfterChi(player.hand, option);
     score += keptRedCount * 8;
 
-    // 吃后听牌张数变化（真实向听，带缓存）
+    // 吃后必须打出一张：模拟打出后的手牌质量（与碰同一评估深度）
     const usedIds = new Set([...option.mainCards, ...(option.biCards ?? [])].map((c) => c.id));
     const afterHand = player.hand.filter((c) => !usedIds.has(c.id));
-    const after = analyzeHand(afterHand, requirePair, player.huxi + option.huxi);
-    score += (after.winningCount - analysis.winningCount) * 50;
-    if (after.isTing) score += 30;
+    if (afterHand.length === 0) continue;
+    const after = bestDiscardAnalysis(state, player, afterHand, player.huxi + option.huxi, visible);
+
+    // 吃后听牌张数变化（真实向听，带缓存）
+    score += (after.winningCount - current.winningCount) * 50;
+    if (after.isTing && !current.isTing) score += 30;
 
     // 向听距离变化：吃牌把手牌向完整推进得越多越值得吃
-    const distBefore = estimateDistance(player.hand, requirePair);
-    const distAfter = estimateDistance(afterHand, requirePair);
-    score += (distBefore.distance - distAfter.distance) * 60;
-
-    // 避免破坏对子/坎
-    const pairBroken = countPairs(player.hand) > countPairsAfterChi(player.hand, option);
-    if (pairBroken) score -= 25;
+    score += (current.distance - after.distance) * 60;
 
     // 已听牌时，优先吃能增加胡息的
-    if (analysis.isTing) score += option.huxi * 8;
+    if (current.isTing) score += option.huxi * 8;
 
     if (score > bestScore) {
       bestScore = score;
@@ -166,23 +164,8 @@ function chooseChiOption(_state: GameState, player: PlayerState, options: ChiOpt
   }
 
   // 若分数太低且未听牌，放弃吃
-  if (bestScore < 15 && !analysis.isTing) return null;
+  if (bestScore < 15 && !current.isTing) return null;
   return best;
-}
-
-function countPairs(hand: Card[]): number {
-  const groups = groupByKey(hand);
-  let pairs = 0;
-  for (const cards of groups.values()) {
-    pairs += Math.floor(cards.length / 2);
-  }
-  return pairs;
-}
-
-function countPairsAfterChi(hand: Card[], option: ChiOption): number {
-  const usedIds = new Set(option.mainCards.map((c) => c.id));
-  const remaining = hand.filter((c) => !usedIds.has(c.id));
-  return countPairs(remaining);
 }
 
 function countRedInHandAfterChi(hand: Card[], option: ChiOption): number {

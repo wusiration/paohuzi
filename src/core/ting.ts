@@ -278,8 +278,9 @@ export function estimateDistance(hand: Card[], requirePair: boolean): DistanceEs
     }
   }
 
-  // 目标牌组数：20 张手牌瞄准 21 张（7 组），17 张瞄准 18 张（6 组）
-  const needed = Math.ceil((hand.length + 1) / 3);
+  // 目标牌组数：手牌 20 张瞄准 21 张（7 组），17 张瞄准 18 张（6 组），
+  // 18 张（吃/碰后待打出的瞬态）打出 1 张后瞄准 18 张（6 组）
+  const needed = Math.round((hand.length + 1) / 3);
   const usablePartials = Math.min(partials, Math.max(0, needed - groups));
   let distance = needed - groups - usablePartials * 0.5;
   // 有跑/提时胡牌必须有将：没有对子也没有对子半搭，加罚

@@ -139,7 +139,7 @@ describe('向听估计（estimateDistance）', () => {
       C('big', 9),
     ];
     expect(estimateDistance(scattered, false).distance).toBeGreaterThan(
-      estimateDistance(nearComplete, false).distance + 2
+      estimateDistance(nearComplete, false).distance + 1
     );
   });
 });
