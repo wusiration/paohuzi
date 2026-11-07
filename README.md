@@ -33,6 +33,12 @@ npm run build
 
 # 单元测试
 npm test
+
+# 批量模拟对局（统计胜率/流局率/终局听牌）
+npx vite-node scripts/simulate.ts 300
+
+# 新旧 AI A/B 对战（对比策略强度）
+npx vite-node scripts/ab-test.ts 300
 ```
 
 开发服务器默认地址：`http://localhost:5173`

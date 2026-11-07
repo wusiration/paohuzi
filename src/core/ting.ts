@@ -81,10 +81,10 @@ function relevantTypes(hand: Card[]): CardType[] {
   return ALL_TYPES.filter((t) => relevant.has(`${t.suit}-${t.rank}`));
 }
 
-function handSignature(hand: Card[], requirePair: boolean, baseHuxi: number): string {
+function handSignature(hand: Card[], requirePair: boolean, baseHuxi: number, threshold: number): string {
   // 拆分逻辑只依赖 suit+rank，不依赖具体 id，因此用牌型签名换取跨对局缓存命中
   const keys = hand.map(cardKey).sort().join(',');
-  return `${keys}|${requirePair ? 'P' : 'N'}|${baseHuxi}`;
+  return `${keys}|${requirePair ? 'P' : 'N'}|${baseHuxi}|${threshold}`;
 }
 
 function makeProbeCard(type: CardType): Card {
@@ -102,9 +102,15 @@ function makeProbeCard(type: CardType): Card {
  * @param hand 手牌（不含落地牌）
  * @param requirePair 有跑/提落地时胡牌必须含将
  * @param baseHuxi 已落地牌组的胡息（player.huxi）
+ * @param threshold 起胡胡息线：自摸潜力用 15，可胡他人弃牌的稳听线用 18
  */
-export function analyzeHand(hand: Card[], requirePair: boolean, baseHuxi: number): HandAnalysis {
-  const signature = handSignature(hand, requirePair, baseHuxi);
+export function analyzeHand(
+  hand: Card[],
+  requirePair: boolean,
+  baseHuxi: number,
+  threshold: number = HU_HUXI_THRESHOLD
+): HandAnalysis {
+  const signature = handSignature(hand, requirePair, baseHuxi, threshold);
   const cached = analysisCache.get(signature);
   if (cached) return cached;
 
@@ -125,7 +131,7 @@ export function analyzeHand(hand: Card[], requirePair: boolean, baseHuxi: number
     if (!split.valid) continue;
 
     const totalHuxi = baseHuxi + split.huxi;
-    if (totalHuxi >= HU_HUXI_THRESHOLD) {
+    if (totalHuxi >= threshold) {
       winningKeys.push(key);
     }
   }

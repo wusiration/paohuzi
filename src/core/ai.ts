@@ -17,6 +17,8 @@ const SOLID_HU_THRESHOLD = 18;
 interface RichAnalysis extends HandAnalysis {
   /** 按剩余可摸张数加权的有效胡牌张数 */
   effectiveCount: number;
+  /** 稳听胡牌张数（≥18 胡息，可胡他人弃牌） */
+  solidCount: number;
 }
 
 export function shouldOpenHand(player: PlayerState): boolean {
@@ -229,6 +231,7 @@ function bestDiscardAnalysis(
     const score =
       analysis.winningCount * 1000 +
       analysis.effectiveCount * 60 +
+      analysis.solidCount * 200 +
       safety -
       keep;
 
@@ -240,7 +243,7 @@ function bestDiscardAnalysis(
   return best!;
 }
 
-/** 分析手牌并叠加"剩余可摸张数"权重 */
+/** 分析手牌并叠加"剩余可摸张数"权重与稳听（18 胡息线）统计 */
 function richAnalyze(
   hand: Card[],
   requirePair: boolean,
@@ -252,7 +255,9 @@ function richAnalyze(
     (sum, key) => sum + Math.max(0, 4 - (visible.get(key) ?? 0)),
     0
   );
-  return { ...analysis, effectiveCount };
+  // 稳听：18 胡息线，胡牌机会不再局限于自摸
+  const solid = analyzeHand(hand, requirePair, baseHuxi, SOLID_HU_THRESHOLD);
+  return { ...analysis, effectiveCount, solidCount: solid.winningCount };
 }
 
 function analyze(player: PlayerState): HandAnalysis {
