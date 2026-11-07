@@ -32,7 +32,7 @@ function makeMeld(type: MeldType, cards: Card[], ownerId: string): Meld {
 }
 
 // 查找所有包含第一张牌的合法组合
-function findGroupsWithFirst(hand: Card[], isZiMo: boolean): { type: MeldType; cards: Card[] }[] {
+function findGroupsWithFirst(hand: Card[], isZiMo: boolean, winningCardId?: string): { type: MeldType; cards: Card[] }[] {
   if (hand.length === 0) return [];
   const first = hand[0];
   const results: { type: MeldType; cards: Card[] }[] = [];
@@ -47,11 +47,13 @@ function findGroupsWithFirst(hand: Card[], isZiMo: boolean): { type: MeldType; c
     }
   }
 
-  // 三张相同（碰/偎）
+  // 三张相同
   const sameCards = hand.filter((c) => isSameCard(c, first));
   if (sameCards.length >= 3) {
-    // 自己摸到第三张算偎，否则算碰
-    const type: MeldType = isZiMo ? 'wei' : 'peng';
+    // 在手三张称"坎"，与偎同息（小3大6）；
+    // 仅当该组包含胡牌张时按来源计：自摸算偎、胡他人牌算碰
+    const containsWinningCard = winningCardId !== undefined && sameCards.some((c) => c.id === winningCardId);
+    const type: MeldType = containsWinningCard && !isZiMo ? 'peng' : 'wei';
     results.push({ type, cards: sameCards.slice(0, 3) });
   }
 
@@ -82,7 +84,8 @@ function searchSplit(
   ownerId: string,
   isZiMo: boolean,
   usedPair: boolean,
-  cache: Map<string, SplitResult>
+  cache: Map<string, SplitResult>,
+  winningCardId?: string
 ): SplitResult {
   const key = hand.map((c) => c.id).join(',') + `|${usedPair}|${isZiMo}`;
   if (cache.has(key)) return cache.get(key)!;
@@ -94,13 +97,13 @@ function searchSplit(
   }
 
   let best: SplitResult | null = null;
-  const groups = findGroupsWithFirst(hand, isZiMo);
+  const groups = findGroupsWithFirst(hand, isZiMo, winningCardId);
 
   for (const group of groups) {
     if (group.type === 'pair') {
       if (usedPair) continue;
       const remaining = removeCards(hand, group.cards);
-      const sub = searchSplit(remaining, ownerId, isZiMo, true, cache);
+      const sub = searchSplit(remaining, ownerId, isZiMo, true, cache, winningCardId);
       if (sub.valid) {
         const pairMeld = makeMeld('pair', group.cards, ownerId);
         const candidate: SplitResult = {
@@ -113,7 +116,7 @@ function searchSplit(
       }
     } else {
       const remaining = removeCards(hand, group.cards);
-      const sub = searchSplit(remaining, ownerId, isZiMo, usedPair, cache);
+      const sub = searchSplit(remaining, ownerId, isZiMo, usedPair, cache, winningCardId);
       if (sub.valid) {
         const meld = makeMeld(group.type, group.cards, ownerId);
         const candidate: SplitResult = {
@@ -132,10 +135,21 @@ function searchSplit(
   return result;
 }
 
-export function splitHand(hand: Card[], ownerId: string, requirePair: boolean, isZiMo: boolean = false): SplitResult {
+/**
+ * 拆分手牌。
+ * @param winningCardId 胡牌张 id：包含它的三张组按来源计息（自摸算偎、胡他人牌算碰），
+ *                      其余在手三张一律按坎计息（3/6）。不传则全部按坎计。
+ */
+export function splitHand(
+  hand: Card[],
+  ownerId: string,
+  requirePair: boolean,
+  isZiMo: boolean = false,
+  winningCardId?: string
+): SplitResult {
   const sorted = hand.slice().sort(cardSort);
   const cache = new Map<string, SplitResult>();
-  const result = searchSplit(sorted, ownerId, isZiMo, false, cache);
+  const result = searchSplit(sorted, ownerId, isZiMo, false, cache, winningCardId);
   if (!result.valid) return result;
   if (requirePair && !result.pair) return { valid: false, melds: [], huxi: 0 };
   return result;
@@ -154,7 +168,7 @@ export function calculateHu(
 ): HuResult {
   const fullHand = [...player.hand, extraCard];
   const requirePair = hasPaoOrTi(player.melds);
-  const split = splitHand(fullHand, player.id, requirePair, isZiMo);
+  const split = splitHand(fullHand, player.id, requirePair, isZiMo, extraCard.id);
 
   if (!split.valid) {
     return {
