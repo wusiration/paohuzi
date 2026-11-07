@@ -51,7 +51,7 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
     if (JSON.stringify(mergedOrder) !== JSON.stringify(handOrder)) {
       setHandOrder(mergedOrder);
     }
-  }, [player.hand, player.handOrder]);
+  }, [player.hand, player.handOrder, handOrder]);
 
   const orderedPlayerHand = useMemo(() => {
     const map = new Map(player.hand.map((c) => [c.id, c]));

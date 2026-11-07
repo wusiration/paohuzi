@@ -126,7 +126,8 @@ describe('模拟对局检测', () => {
 
     // 整局无人摸牌应为 0，否则有严重 bug
     expect(noDrawGames).toBe(0);
-  });
+    // AI 含听牌模拟评估，50 局耗时较长，放宽超时
+  }, 60000);
 
   it('庄家应持有 21 张牌，闲家 20 张（起手四张相同会提成落地牌）', () => {
     let state = createInitialState();

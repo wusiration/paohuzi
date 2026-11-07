@@ -1,6 +1,8 @@
-import type { Card, ChiOption, GameState, PendingAction, PlayerState } from './types';
+import type { Card, ChiOption, GameState, Meld, PendingAction, PlayerState } from './types';
 import { cardKey } from './types';
-import { splitHand } from './solver';
+import { hasPaoOrTi } from './solver';
+import { analyzeHand, HU_HUXI_THRESHOLD, type HandAnalysis } from './ting';
+import { huxiForMeld } from '../utils/helpers';
 
 export interface AIDecision {
   actionId?: string;
@@ -9,24 +11,29 @@ export interface AIDecision {
   openHand?: boolean;
 }
 
-export function shouldOpenHand(player: PlayerState): boolean {
-  // AI 明牌策略：手牌较好时才明牌（听牌概率高、红牌多、大字多）
-  const split = splitHand(player.hand, player.id, false, false);
-  if (!split.valid) return false;
+/** 非自摸稳胡线：18 胡息可平胡 */
+const SOLID_HU_THRESHOLD = 18;
 
-  const handHuxi = split.melds.reduce((sum, m) => sum + m.huxi, 0);
-  const totalHuxi = player.huxi + handHuxi;
-  const tingLikelihood = Math.min(totalHuxi / 18, 1) * 0.6 + (split.pair ? 0.2 : 0);
+interface RichAnalysis extends HandAnalysis {
+  /** 按剩余可摸张数加权的有效胡牌张数 */
+  effectiveCount: number;
+}
+
+export function shouldOpenHand(player: PlayerState): boolean {
+  // AI 明牌策略：已听牌或名堂潜力大时明牌（明牌结算翻倍，风险自负）
+  const analysis = analyze(player);
 
   const redCount = player.hand.filter((c) => c.isRed).length + player.melds.flatMap((m) => m.cards).filter((c) => c.isRed).length;
   const bigCount = player.hand.filter((c) => c.suit === 'big').length + player.melds.flatMap((m) => m.cards).filter((c) => c.suit === 'big').length;
 
-  // 起手提或起手很好时考虑明牌
-  if (player.paoTiCount >= 1 && tingLikelihood >= 0.5) return true;
-  if (tingLikelihood >= 0.7 && redCount >= 3) return true;
+  // 已听牌：随时可能胡，明牌博取翻倍
+  if (analysis.isTing) return true;
+  // 名堂潜力：红牌/大字多，哪怕慢一点也值得搏
   if (redCount >= 5 && bigCount >= 8) return true;
+  if (player.paoTiCount >= 1 && redCount >= 3) return true;
 
-  return Math.random() > 0.92 && tingLikelihood >= 0.4;
+  // 其余情况偶尔激进一次
+  return Math.random() > 0.95;
 }
 
 export function decideAction(state: GameState, playerId: string): AIDecision | null {
@@ -68,33 +75,53 @@ export function decideAction(state: GameState, playerId: string): AIDecision | n
   return null;
 }
 
-function shouldPeng(_state: GameState, player: PlayerState, action: PendingAction): boolean {
+function shouldPeng(state: GameState, player: PlayerState, action: PendingAction): boolean {
   const card = action.card;
-  const rankKey = `${card.suit}-${card.rank}`;
+  const key = cardKey(card);
 
   // 必碰：自己已落地该牌的碰/偎（可升级成跑）
   const hasExistingMeld = player.melds.some(
-    (m) => m.cards.length > 0 && `${m.cards[0].suit}-${m.cards[0].rank}` === rankKey
+    (m) => m.cards.length > 0 && cardKey(m.cards[0]) === key
   );
   if (hasExistingMeld) return true;
 
-  // 接近听牌或已听牌时，优先碰以加速胡牌
-  const tingLikelihood = estimateTingLikelihood(player);
-  if (tingLikelihood >= 0.5) return true;
+  const requirePair = hasPaoOrTi(player.melds);
+  const visible = buildVisibility(state, player.id);
+  const current = richAnalyze(player.hand, requirePair, player.huxi, visible);
 
-  // 红牌、大字价值高，优先碰
-  if (card.isRed || card.suit === 'big') {
-    // 但如果会严重破坏顺子结构则放弃
-    return !isCriticalForSequences(card, player.hand);
+  // 模拟碰：手牌移除两张同牌、落地加碰胡息，随后必须打出一张
+  const rest = removeCardsByKey(player.hand, key, 2);
+  if (rest.length !== player.hand.length - 2) return false;
+  // 碰后无牌可打（极端残局），放弃碰
+  if (rest.length === 0) return false;
+  const pengHuxi = huxiForMeld('peng', card.suit === 'big');
+  const after = bestDiscardAnalysis(state, player, rest, player.huxi + pengHuxi, visible);
+
+  if (current.isTing) {
+    // 已听牌：碰后仍听牌且不亏胡牌张才碰；除非碰胡息能跨过起胡门槛
+    if (!after.isTing) return false;
+    if (after.effectiveCount >= current.effectiveCount) return true;
+    return crossesThreshold(player.huxi, player.huxi + pengHuxi);
   }
 
-  // 小字非红：仅在牌型较好或需要提速时碰
-  if (player.huxi >= 12 || tingLikelihood >= 0.3) return Math.random() > 0.4;
-  return Math.random() > 0.65;
+  // 未听牌：碰后结构不劣化才碰
+  if (after.winningCount < current.winningCount) return false;
+  // 碰能跨过 15/18 胡息门槛，或当前胡息还不够起胡，积极碰
+  if (crossesThreshold(player.huxi, player.huxi + pengHuxi)) return true;
+  return player.huxi + pengHuxi < HU_HUXI_THRESHOLD;
+}
+
+/** 胡息是否跨过 15 / 18 两道门槛 */
+function crossesThreshold(before: number, after: number): boolean {
+  return (
+    (before < HU_HUXI_THRESHOLD && after >= HU_HUXI_THRESHOLD) ||
+    (before < SOLID_HU_THRESHOLD && after >= SOLID_HU_THRESHOLD)
+  );
 }
 
 function chooseChiOption(_state: GameState, player: PlayerState, options: ChiOption[]): ChiOption | null {
-  const tingLikelihood = estimateTingLikelihood(player);
+  const requirePair = hasPaoOrTi(player.melds);
+  const analysis = analyze(player);
   let best: ChiOption | null = null;
   let bestScore = -Infinity;
 
@@ -107,16 +134,19 @@ function chooseChiOption(_state: GameState, player: PlayerState, options: ChiOpt
     const keptRedCount = countRedInHandAfterChi(player.hand, option);
     score += keptRedCount * 8;
 
-    // 接近听牌时更看重向听数减少
-    const tingDelta = estimateTingDelta(player.hand, option);
-    score += tingDelta * 40;
+    // 吃后听牌张数变化（真实向听，带缓存）
+    const usedIds = new Set([...option.mainCards, ...(option.biCards ?? [])].map((c) => c.id));
+    const afterHand = player.hand.filter((c) => !usedIds.has(c.id));
+    const after = analyzeHand(afterHand, requirePair, player.huxi + option.huxi);
+    score += (after.winningCount - analysis.winningCount) * 50;
+    if (after.isTing) score += 30;
 
     // 避免破坏对子/坎
     const pairBroken = countPairs(player.hand) > countPairsAfterChi(player.hand, option);
     if (pairBroken) score -= 25;
 
-    // 已接近胡牌时，优先吃能增加胡息的
-    if (tingLikelihood >= 0.6) score += option.huxi * 8;
+    // 已听牌时，优先吃能增加胡息的
+    if (analysis.isTing) score += option.huxi * 8;
 
     if (score > bestScore) {
       bestScore = score;
@@ -124,8 +154,8 @@ function chooseChiOption(_state: GameState, player: PlayerState, options: ChiOpt
     }
   }
 
-  // 若分数太低且当前牌型尚可，放弃吃
-  if (bestScore < 15 && tingLikelihood < 0.4) return null;
+  // 若分数太低且未听牌，放弃吃
+  if (bestScore < 15 && !analysis.isTing) return null;
   return best;
 }
 
@@ -159,95 +189,156 @@ function groupByKey(hand: Card[]): Map<string, Card[]> {
   return map;
 }
 
-function isCriticalForSequences(card: Card, hand: Card[]): boolean {
-  // 判断这张牌是否是多个潜在顺子的关键牌
-  const sameSuit = hand.filter((c) => c.suit === card.suit && c.id !== card.id);
-  let nearCount = 0;
-  for (const other of sameSuit) {
-    if (Math.abs(other.rank - card.rank) <= 2 && other.rank !== card.rank) {
-      nearCount++;
-    }
-  }
-  return nearCount >= 2;
-}
-
-function estimateTingLikelihood(player: PlayerState): number {
-  // 基于落地胡息和手牌结构简单估计接近胡牌的概率
-  const split = splitHand(player.hand, player.id, false, false);
-  if (!split.valid) return 0;
-  const handHuxi = split.melds.reduce((sum, m) => sum + m.huxi, 0);
-  const totalHuxi = player.huxi + handHuxi;
-  const ratio = Math.min(totalHuxi / 18, 1);
-  return ratio * 0.6 + (split.pair ? 0.2 : 0);
-}
-
-function estimateTingDelta(hand: Card[], option: ChiOption): number {
-  // 估算吃牌后向听数的变化（简化版）
-  const before = splitHand(hand, 'ai', false, false);
-  const usedIds = new Set(option.mainCards.map((c) => c.id));
-  const afterHand = hand.filter((c) => !usedIds.has(c.id));
-  const after = splitHand(afterHand, 'ai', false, false);
-
-  if (!before.valid || !after.valid) return 0;
-
-  const beforeGroups = before.melds.length + (before.pair ? 1 : 0);
-  const afterGroups = after.melds.length + (after.pair ? 1 : 0);
-  return afterGroups - beforeGroups;
-}
-
 export function chooseDiscard(state: GameState, playerId: string): string | null {
   const player = state.players.find((p) => p.id === playerId);
   if (!player || player.hand.length === 0) return null;
 
-  // 简单安全评估：避免打出可能让别家碰/跑/胡的牌
-  const dangerousKeys = collectDangerousKeys(state, playerId);
+  const visible = buildVisibility(state, playerId);
+  const best = bestDiscardAnalysis(state, player, player.hand, player.huxi, visible);
+  const card = player.hand.find((c) => cardKey(c) === best.discardKey);
+  return card ? card.id : player.hand[0].id;
+}
 
-  let worstCard = player.hand[0];
-  let worstScore = Infinity;
+interface DiscardCandidate extends RichAnalysis {
+  discardKey: string;
+  score: number;
+}
 
-  for (const card of player.hand) {
-    const score = evaluateCardValue(card, player.hand, player.melds, dangerousKeys);
-    if (score < worstScore) {
-      worstScore = score;
-      worstCard = card;
+/**
+ * 出牌核心评估：枚举每种可打的牌，模拟打出后的手牌质量。
+ * 主分 = 打出后听牌/胡牌张数；辅分 = 打出安全性 - 保留价值。
+ */
+function bestDiscardAnalysis(
+  state: GameState,
+  player: PlayerState,
+  hand: Card[],
+  baseHuxi: number,
+  visible: Map<string, number>
+): DiscardCandidate {
+  const requirePair = hasPaoOrTi(player.melds);
+  const uniqueKeys = [...groupByKey(hand).keys()];
+
+  let best: DiscardCandidate | null = null;
+  for (const key of uniqueKeys) {
+    const rest = removeCardsByKey(hand, key, 1);
+    const analysis = richAnalyze(rest, requirePair, baseHuxi, visible);
+    const safety = assessSafety(state, player.id, key, visible);
+    const card = hand.find((c) => cardKey(c) === key)!;
+    const keep = keepValue(card, hand, player.melds);
+
+    const score =
+      analysis.winningCount * 1000 +
+      analysis.effectiveCount * 60 +
+      safety -
+      keep;
+
+    if (!best || score > best.score) {
+      best = { ...analysis, discardKey: key, score };
     }
   }
 
-  return worstCard.id;
+  return best!;
 }
 
-function collectDangerousKeys(state: GameState, selfId: string): Set<string> {
-  const dangerous = new Set<string>();
-  const self = state.players.find((p) => p.id === selfId);
-  if (!self) return dangerous;
+/** 分析手牌并叠加"剩余可摸张数"权重 */
+function richAnalyze(
+  hand: Card[],
+  requirePair: boolean,
+  baseHuxi: number,
+  visible: Map<string, number>
+): RichAnalysis {
+  const analysis = analyzeHand(hand, requirePair, baseHuxi);
+  const effectiveCount = analysis.winningKeys.reduce(
+    (sum, key) => sum + Math.max(0, 4 - (visible.get(key) ?? 0)),
+    0
+  );
+  return { ...analysis, effectiveCount };
+}
+
+function analyze(player: PlayerState): HandAnalysis {
+  return analyzeHand(player.hand, hasPaoOrTi(player.melds), player.huxi);
+}
+
+/**
+ * 统计每种牌在公开信息中的可见张数。
+ * 只看公开信息：自己手牌/落地、别家公开落地、日志中的弃牌与摸出明牌。
+ * 别家暗置的偎/臭偎不可见，诚实起见不统计其牌面。
+ */
+function buildVisibility(state: GameState, selfId: string): Map<string, number> {
+  const map = new Map<string, number>();
+  const add = (card: Card) => {
+    const key = cardKey(card);
+    map.set(key, (map.get(key) ?? 0) + 1);
+  };
 
   for (const player of state.players) {
-    if (player.id === selfId) continue;
-    // 别家落地牌型中缺少一张即可成跑的牌
-    for (const meld of player.melds) {
-      if (meld.cards.length === 3 && ['peng', 'wei', 'chouWei'].includes(meld.type)) {
-        dangerous.add(`${meld.cards[0].suit}-${meld.cards[0].rank}`);
-      }
-    }
-    // 别家已碰/偎过的牌再次出现时很可能成跑
-    for (const meld of player.melds) {
-      if (['peng', 'wei', 'chouWei'].includes(meld.type)) {
-        dangerous.add(`${meld.cards[0].suit}-${meld.cards[0].rank}`);
+    if (player.id === selfId) {
+      player.hand.forEach(add);
+      for (const meld of player.melds) meld.cards.forEach(add);
+    } else {
+      for (const meld of player.melds) {
+        if (!meld.isHidden) meld.cards.forEach(add);
       }
     }
   }
 
-  return dangerous;
+  for (const log of state.logs) {
+    if (log.action === 'discard' && log.card) add(log.card);
+  }
+  // 响应窗口内的明牌尚未落入日志
+  if (state.revealedCard) add(state.revealedCard);
+
+  return map;
 }
 
-function evaluateCardValue(
-  card: Card,
-  hand: Card[],
-  melds: import('./types').Meld[],
-  dangerousKeys: Set<string>
+/**
+ * 打出某张牌的安全分（越高越安全）。
+ * - 绝张（4 张全部可见）：别家不可能有用，最安全
+ * - 别家漏胡/漏碰过的牌：规则上无法再胡/碰
+ * - 别家公开碰/偎三张组：打出送跑，重罚
+ * - 中张剩余多：易被下家吃，小罚
+ */
+function assessSafety(
+  state: GameState,
+  selfId: string,
+  key: string,
+  visible: Map<string, number>
 ): number {
   let score = 0;
-  const key = `${card.suit}-${card.rank}`;
+  const visibleCount = visible.get(key) ?? 0;
+
+  if (visibleCount >= 4) {
+    score += 200;
+  }
+
+  for (const opp of state.players) {
+    if (opp.id === selfId) continue;
+    if (opp.passedHuRanks.includes(key)) score += 80;
+    if (opp.passedPengRanks.includes(key)) score += 40;
+
+    // 公开碰/偎三张组，打出即送跑
+    const feedsPao = opp.melds.some(
+      (m) =>
+        !m.isHidden &&
+        m.cards.length === 3 &&
+        ['peng', 'wei', 'chouWei'].includes(m.type) &&
+        cardKey(m.cards[0]) === key
+    );
+    if (feedsPao) score -= 150;
+  }
+
+  // 中张（3-8）容易被吃，剩余越多越危险
+  const rank = Number(key.split('-')[1]);
+  if (rank >= 3 && rank <= 8) {
+    score -= Math.max(0, 4 - visibleCount) * 3;
+  }
+
+  return score;
+}
+
+/** 牌的保留价值（越高越不该打），仅作模拟评估后的辅分 */
+function keepValue(card: Card, hand: Card[], melds: Meld[]): number {
+  let score = 0;
 
   // 红牌、大字加分（保留倾向）
   if (card.isRed) score += 35;
@@ -284,23 +375,26 @@ function evaluateCardValue(
     score -= 30;
   }
 
-  // 已落地同牌型：若已有碰/偎/跑，手牌中同牌价值降低
+  // 已落地同牌型：手牌中同牌价值降低
   const hasSameMeld = melds.some((m) =>
     m.cards.some((c) => c.suit === card.suit && c.rank === card.rank)
   );
   if (hasSameMeld) score -= 20;
 
-  // 安全度：打出危险牌要扣大分
-  if (dangerousKeys.has(key)) {
-    score -= 50;
-  }
-
-  // 单张红大牌额外谨慎
-  if (card.isRed && card.suit === 'big' && sameCards.length === 1) {
-    score += 15;
-  }
-
   return score;
+}
+
+function removeCardsByKey(hand: Card[], key: string, count: number): Card[] {
+  const result: Card[] = [];
+  let removed = 0;
+  for (const card of hand) {
+    if (removed < count && cardKey(card) === key) {
+      removed++;
+      continue;
+    }
+    result.push(card);
+  }
+  return result;
 }
 
 export function isAIPlayer(state: GameState, playerId: string): boolean {
