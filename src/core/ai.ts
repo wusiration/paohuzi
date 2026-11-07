@@ -1,7 +1,7 @@
 import type { Card, ChiOption, GameState, Meld, PendingAction, PlayerState } from './types';
 import { cardKey } from './types';
 import { hasPaoOrTi } from './solver';
-import { analyzeHand, HU_HUXI_THRESHOLD, type HandAnalysis } from './ting';
+import { analyzeHand, estimateDistance, HU_HUXI_THRESHOLD, type HandAnalysis } from './ting';
 import { huxiForMeld } from '../utils/helpers';
 
 export interface AIDecision {
@@ -19,6 +19,8 @@ interface RichAnalysis extends HandAnalysis {
   effectiveCount: number;
   /** 稳听胡牌张数（≥18 胡息，可胡他人弃牌） */
   solidCount: number;
+  /** 距完整拆分的估计距离（越小越接近听牌） */
+  distance: number;
 }
 
 export function shouldOpenHand(player: PlayerState): boolean {
@@ -108,6 +110,8 @@ function shouldPeng(state: GameState, player: PlayerState, action: PendingAction
 
   // 未听牌：碰后结构不劣化才碰
   if (after.winningCount < current.winningCount) return false;
+  // 向听明显变差（超过半个牌块）不碰
+  if (after.distance > current.distance + 0.5) return false;
   // 碰能跨过 15/18 胡息门槛，或当前胡息还不够起胡，积极碰
   if (crossesThreshold(player.huxi, player.huxi + pengHuxi)) return true;
   return player.huxi + pengHuxi < HU_HUXI_THRESHOLD;
@@ -142,6 +146,11 @@ function chooseChiOption(_state: GameState, player: PlayerState, options: ChiOpt
     const after = analyzeHand(afterHand, requirePair, player.huxi + option.huxi);
     score += (after.winningCount - analysis.winningCount) * 50;
     if (after.isTing) score += 30;
+
+    // 向听距离变化：吃牌把手牌向完整推进得越多越值得吃
+    const distBefore = estimateDistance(player.hand, requirePair);
+    const distAfter = estimateDistance(afterHand, requirePair);
+    score += (distBefore.distance - distAfter.distance) * 60;
 
     // 避免破坏对子/坎
     const pairBroken = countPairs(player.hand) > countPairsAfterChi(player.hand, option);
@@ -230,8 +239,9 @@ function bestDiscardAnalysis(
 
     const score =
       analysis.winningCount * 1000 +
-      analysis.effectiveCount * 60 +
       analysis.solidCount * 200 +
+      analysis.effectiveCount * 60 -
+      analysis.distance * 100 +
       safety -
       keep;
 
@@ -243,7 +253,7 @@ function bestDiscardAnalysis(
   return best!;
 }
 
-/** 分析手牌并叠加"剩余可摸张数"权重与稳听（18 胡息线）统计 */
+/** 分析手牌并叠加"剩余可摸张数"权重、稳听（18 胡息线）统计与向听距离 */
 function richAnalyze(
   hand: Card[],
   requirePair: boolean,
@@ -257,7 +267,8 @@ function richAnalyze(
   );
   // 稳听：18 胡息线，胡牌机会不再局限于自摸
   const solid = analyzeHand(hand, requirePair, baseHuxi, SOLID_HU_THRESHOLD);
-  return { ...analysis, effectiveCount, solidCount: solid.winningCount };
+  const { distance } = estimateDistance(hand, requirePair);
+  return { ...analysis, effectiveCount, solidCount: solid.winningCount, distance };
 }
 
 function analyze(player: PlayerState): HandAnalysis {

@@ -21,6 +21,15 @@ export interface HandAnalysis {
   winningCount: number;
 }
 
+export interface DistanceEstimate {
+  /** 距完整拆分的估计距离（0.5 步进，越小越接近听牌） */
+  distance: number;
+  /** 完整牌组数 */
+  groups: number;
+  /** 半搭子数（对子/连张/间张/跨花色对，每个算 0.5 进度） */
+  partials: number;
+}
+
 interface CardType {
   suit: CardSuit;
   rank: (typeof RANKS)[number];
@@ -153,4 +162,131 @@ export function analyzeHand(
 export function clearAnalysisCache(): void {
   analysisCache.clear();
   splitCache.clear();
+  distanceCache.clear();
+}
+
+// ---------------------------------------------------------------------------
+// 向听估计（贪心牌块分解）
+// ---------------------------------------------------------------------------
+
+const distanceCache = new Map<string, DistanceEstimate>();
+const DISTANCE_CACHE_LIMIT = 20000;
+
+/**
+ * 估计手牌距完整拆分的距离（向听代理，非精确 shanten）。
+ *
+ * 贪心提取完整牌组（坎 > 特殊顺 > 普通顺 > 大小三搭），
+ * 再提取半搭子（对子 > 连张/间张 > 跨花色对）。
+ * distance = 所需牌组数 - 完整组数 - 有效半搭 × 0.5，越小越接近听牌。
+ *
+ * 用于未听牌时比较"哪手牌离听更近"，精度足够做候选排序。
+ */
+export function estimateDistance(hand: Card[], requirePair: boolean): DistanceEstimate {
+  const keys = hand.map(cardKey).sort().join(',');
+  const signature = `${keys}|${requirePair ? 'P' : 'N'}`;
+  const cached = distanceCache.get(signature);
+  if (cached) return cached;
+
+  // 计数数组：下标 1..10
+  const small = new Array<number>(11).fill(0);
+  const big = new Array<number>(11).fill(0);
+  for (const card of hand) {
+    (card.suit === 'small' ? small : big)[card.rank]++;
+  }
+
+  let groups = 0;
+  let partials = 0;
+  let hasPair = false;
+  const suits = [small, big];
+
+  // 1) 坎（三张同牌）
+  for (const arr of suits) {
+    for (let r = 1; r <= 10; r++) {
+      while (arr[r] >= 3) {
+        arr[r] -= 3;
+        groups++;
+      }
+    }
+  }
+
+  // 2) 特殊顺子（一二三 / 二七十）
+  for (const arr of suits) {
+    while (arr[1] >= 1 && arr[2] >= 1 && arr[3] >= 1) {
+      arr[1]--; arr[2]--; arr[3]--;
+      groups++;
+    }
+    while (arr[2] >= 1 && arr[7] >= 1 && arr[10] >= 1) {
+      arr[2]--; arr[7]--; arr[10]--;
+      groups++;
+    }
+  }
+
+  // 3) 普通顺子
+  for (const arr of suits) {
+    for (let r = 1; r <= 8; r++) {
+      while (arr[r] >= 1 && arr[r + 1] >= 1 && arr[r + 2] >= 1) {
+        arr[r]--; arr[r + 1]--; arr[r + 2]--;
+        groups++;
+      }
+    }
+  }
+
+  // 4) 大小三搭（同 rank 跨花色 2+1）
+  for (let r = 1; r <= 10; r++) {
+    while (small[r] >= 1 && big[r] >= 1 && small[r] + big[r] >= 3) {
+      if (small[r] >= big[r]) {
+        small[r] -= 2; big[r] -= 1;
+      } else {
+        big[r] -= 2; small[r] -= 1;
+      }
+      groups++;
+    }
+  }
+
+  // 5) 对子（半搭）
+  for (const arr of suits) {
+    for (let r = 1; r <= 10; r++) {
+      while (arr[r] >= 2) {
+        arr[r] -= 2;
+        partials++;
+        hasPair = true;
+      }
+    }
+  }
+
+  // 6) 连张 / 间张（半搭）
+  for (const arr of suits) {
+    for (let r = 1; r <= 9; r++) {
+      while (arr[r] >= 1 && arr[r + 1] >= 1) {
+        arr[r]--; arr[r + 1]--;
+        partials++;
+      }
+      if (r <= 8) {
+        while (arr[r] >= 1 && arr[r + 2] >= 1) {
+          arr[r]--; arr[r + 2]--;
+          partials++;
+        }
+      }
+    }
+  }
+
+  // 7) 跨花色同 rank（半搭，大小三搭缺一张）
+  for (let r = 1; r <= 10; r++) {
+    while (small[r] >= 1 && big[r] >= 1) {
+      small[r]--; big[r]--;
+      partials++;
+    }
+  }
+
+  // 目标牌组数：20 张手牌瞄准 21 张（7 组），17 张瞄准 18 张（6 组）
+  const needed = Math.ceil((hand.length + 1) / 3);
+  const usablePartials = Math.min(partials, Math.max(0, needed - groups));
+  let distance = needed - groups - usablePartials * 0.5;
+  // 有跑/提时胡牌必须有将：没有对子也没有对子半搭，加罚
+  if (requirePair && !hasPair) distance += 0.5;
+
+  const result: DistanceEstimate = { distance, groups, partials };
+  if (distanceCache.size >= DISTANCE_CACHE_LIMIT) distanceCache.clear();
+  distanceCache.set(signature, result);
+  return result;
 }

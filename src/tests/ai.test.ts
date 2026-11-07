@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Card, CardSuit, GameState, PendingAction, PlayerState } from '../core/types';
 import { cardKey, isRed, RANKS } from '../core/types';
-import { analyzeHand, clearAnalysisCache } from '../core/ting';
+import { analyzeHand, clearAnalysisCache, estimateDistance } from '../core/ting';
 import { chooseDiscard, decideAction } from '../core/ai';
 
 let cardId = 0;
@@ -95,6 +95,55 @@ describe('听牌分析（analyzeHand）', () => {
   });
 });
 
+describe('向听估计（estimateDistance）', () => {
+  it('接近成型的手牌距离应接近 0.5', () => {
+    // 6 组完整牌 + 1 对：再进一张即可成型
+    const hand = [
+      ...CN('big', 1, 3),
+      ...CN('big', 2, 3),
+      ...CN('big', 3, 3),
+      ...CN('big', 4, 3),
+      ...CN('big', 5, 3),
+      C('small', 1),
+      C('small', 2),
+      C('small', 3),
+      ...CN('small', 5, 2),
+    ];
+    const estimate = estimateDistance(hand, false);
+    expect(estimate.groups).toBe(6);
+    expect(estimate.distance).toBe(0.5);
+  });
+
+  it('零散手牌距离应明显大于成型手牌', () => {
+    const nearComplete = [
+      ...CN('big', 1, 3),
+      ...CN('big', 2, 3),
+      ...CN('big', 3, 3),
+      ...CN('big', 4, 3),
+      ...CN('big', 5, 3),
+      C('small', 1),
+      C('small', 2),
+      C('small', 3),
+      ...CN('small', 5, 2),
+    ];
+    // 3 个坎 + 6 张互不相干的散牌（间距 ≥3，无对子无连张）
+    const scattered = [
+      ...CN('big', 1, 3),
+      ...CN('big', 2, 3),
+      ...CN('big', 3, 3),
+      C('small', 1),
+      C('small', 4),
+      C('small', 7),
+      C('small', 10),
+      C('big', 5),
+      C('big', 9),
+    ];
+    expect(estimateDistance(scattered, false).distance).toBeGreaterThan(
+      estimateDistance(nearComplete, false).distance + 2
+    );
+  });
+});
+
 describe('AI 出牌（chooseDiscard）', () => {
   it('听牌时应打出孤张保听，而不是拆结构', () => {
     // 听小五的手牌 + 孤张大玖，AI 必须打出大玖
@@ -115,6 +164,28 @@ describe('AI 出牌（chooseDiscard）', () => {
 
     const discardId = chooseDiscard(state, 'ai-1');
     expect(keyOf(hand, discardId)).toBe('big-9');
+  });
+
+  it('未听牌时应保留向听结构，不拆牌组和搭子', () => {
+    // 5 个大字坎 + 小五对子 + 小八小九连张 + 大玖孤张：未听牌
+    const hand = [
+      ...CN('big', 1, 3),
+      ...CN('big', 2, 3),
+      ...CN('big', 3, 3),
+      ...CN('big', 4, 3),
+      ...CN('big', 5, 3),
+      ...CN('small', 5, 2),
+      C('small', 8),
+      C('small', 9),
+      C('big', 9),
+    ];
+    const ai = makePlayer('ai-1', hand);
+    const state = makeState([ai, makePlayer('player', []), makePlayer('ai-2', [])]);
+
+    const discardId = chooseDiscard(state, 'ai-1');
+    const key = keyOf(hand, discardId);
+    // 只能打散牌区域（小八/大玖），绝不允许拆坎或对子
+    expect(['small-8', 'big-9']).toContain(key);
   });
 
   it('结构等效时应优先打出绝张（4 张全部可见）', () => {
