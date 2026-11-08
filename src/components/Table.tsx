@@ -177,22 +177,6 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
               <div className="card card-small card-empty" />
             )}
           </div>
-          <div className="revealed-card-area">
-            <span>明牌</span>
-            {state.revealedCard ? (
-              <Card card={state.revealedCard} small dealing />
-            ) : (
-              <div className="card card-small card-empty" />
-            )}
-          </div>
-          <div className="last-discard-area">
-            <span>弃牌</span>
-            {state.lastDiscard ? (
-              <Card card={state.lastDiscard} small played />
-            ) : (
-              <div className="card card-small card-empty" />
-            )}
-          </div>
         </div>
         <div className="header-right">
           <ScorePanel state={state} />
@@ -201,7 +185,24 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
 
       <div className="table-body">
         <div className="table-center">
-          <span className="table-center-text">跑胡子</span>
+          <div className="center-play-area">
+            <div className="revealed-card-area">
+              <span>明牌</span>
+              {state.revealedCard ? (
+                <Card card={state.revealedCard} dealing />
+              ) : (
+                <div className="card card-empty" />
+              )}
+            </div>
+            <div className="last-discard-area">
+              <span>弃牌</span>
+              {state.lastDiscard ? (
+                <Card card={state.lastDiscard} played />
+              ) : (
+                <div className="card card-empty" />
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="ai-area ai-left">
