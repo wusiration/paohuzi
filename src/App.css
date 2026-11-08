@@ -171,6 +171,8 @@ body {
   background: rgba(0, 0, 0, 0.3);
   border-radius: 10px;
   border: 1px solid rgba(240, 230, 210, 0.1);
+  /* 固定最小高度：明牌/弃牌卡出现时不挤压下方布局 */
+  min-height: calc(var(--card-small-height) + 40px);
 }
 
 .header-left,
@@ -413,6 +415,11 @@ body {
   flex-shrink: 0;
   text-align: center;
   line-height: 1.2;
+  /* 固定高度：打出按钮出现/消失不引起布局跳动 */
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .action-panel {
@@ -431,7 +438,8 @@ body {
   flex: 1;
   display: flex;
   gap: 14px;
-  justify-content: center;
+  /* safe center：内容溢出时回退为起始对齐，避免两侧被裁 */
+  justify-content: safe center;
   align-items: center;
   padding: 6px 10px 10px;
   flex-wrap: nowrap;
@@ -1332,7 +1340,7 @@ body {
   }
 }
 
-@media (max-width: 600px), (max-height: 700px) {
+@media (max-width: 600px), (max-height: 850px) {
   :root {
     --card-width: 32px;
     --card-height: 68px;

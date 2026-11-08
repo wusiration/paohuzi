@@ -169,24 +169,30 @@ export function Table({ state, cheatMode, onDiscard, onAction, onNextRound, onOp
           </button>
         </div>
         <div className="header-center">
-          {state.bottomCard && (
-            <div className="bottom-card-area" title="挡底：牌墩最后一张，对所有玩家公开">
-              <span>挡底</span>
+          <div className="bottom-card-area" title="挡底：牌墩最后一张，对所有玩家公开">
+            <span>挡底</span>
+            {state.bottomCard ? (
               <Card card={state.bottomCard} small />
-            </div>
-          )}
-          {state.revealedCard && (
-            <div className="revealed-card-area">
-              <span>明牌</span>
-              <Card card={state.revealedCard} dealing />
-            </div>
-          )}
-          {state.lastDiscard && (
-            <div className="last-discard-area">
-              <span>弃牌</span>
-              <Card card={state.lastDiscard} played />
-            </div>
-          )}
+            ) : (
+              <div className="card card-small card-empty" />
+            )}
+          </div>
+          <div className="revealed-card-area">
+            <span>明牌</span>
+            {state.revealedCard ? (
+              <Card card={state.revealedCard} small dealing />
+            ) : (
+              <div className="card card-small card-empty" />
+            )}
+          </div>
+          <div className="last-discard-area">
+            <span>弃牌</span>
+            {state.lastDiscard ? (
+              <Card card={state.lastDiscard} small played />
+            ) : (
+              <div className="card card-small card-empty" />
+            )}
+          </div>
         </div>
         <div className="header-right">
           <ScorePanel state={state} />
